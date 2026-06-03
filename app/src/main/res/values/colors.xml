@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Common Colors -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- MUSE Design System - Gold / Primary -->
+    <color name="muse_gold">#C9A84C</color>
+    <color name="muse_warm_brown">#8B7355</color>
+
+    <!-- Light Theme -->
+    <color name="light_background">#F5F0E8</color>
+    <color name="light_card">#FFFFFF</color>
+    <color name="light_text_primary">#2C2C2C</color>
+
+    <!-- Dark Theme -->
+    <color name="dark_background">#1A1A1A</color>
+    <color name="dark_card">#2C2C2C</color>
+    <color name="dark_text_primary">#F5F0E8</color>
+</resources>

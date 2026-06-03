@@ -1,0 +1,78 @@
+<resources>
+    <string name="app_name">MUSE</string>
+    <string name="title_home">Home</string>
+    <string name="title_search">Search</string>
+    <string name="title_favorit">Favorite</string>
+    <string name="title_user">Profile</string>
+
+    <string name="search_hint">Cari karya, seniman, periode...</string>
+    <string name="featured_title">Pameran Unggulan</string>
+    <string name="see_all">Lihat Semua</string>
+    <string name="recent_title">Baru Ditambahkan</string>
+    <string name="visit_exhibition">Kunjungi Pameran</string>
+
+    <string name="category_all">Semua</string>
+    <string name="category_painting">Lukisan</string>
+    <string name="category_sculpture">Patung</string>
+    <string name="category_photography">Fotografi</string>
+    <string name="category_ceramic">Keramik</string>
+
+    <string name="error_network">Tidak ada koneksi internet</string>
+    <string name="refresh">Refresh</string>
+
+    <!-- Detail Activity -->
+    <string name="description_label">Deskripsi</string>
+    <string name="read_more">Selengkapnya</string>
+    <string name="read_less">Sembunyikan</string>
+    <string name="additional_info_label">Informasi Tambahan</string>
+    <string name="location_label">LOKASI SAAT INI</string>
+    <string name="accession_label">NOMOR AKSES</string>
+    <string name="restoration_label">RESTORASI TERAKHIR</string>
+    <string name="related_label">Koleksi Terkait</string>
+    <string name="share">Bagikan</string>
+    <string name="save_to_favorite">Simpan ke Favorit</string>
+    <string name="saved">Tersimpan</string>
+    <string name="no_description">Deskripsi tidak tersedia untuk karya ini.</string>
+
+    <!-- Splash Screen -->
+    <string name="tagline">Jelajahi Koleksi Seni Dunia</string>
+    <string name="start_journey">MULAI PERJALANAN</string>
+    <string name="credit">CURATED AESTHETICS</string>
+
+    <!-- Search Fragment -->
+    <string name="search_results_title">Hasil Pencarian</string>
+    <string name="search_results_count">%1$d ditemukan</string>
+    <string name="not_found_title">Tidak ditemukan</string>
+    <string name="not_found_desc">Ruang pameran ini kosong. Kami tidak menemukan hasil yang sesuai di arsip MUSE.</string>
+    <string name="explore_collection">Jelajahi Koleksi Utama</string>
+    <string name="retry">Coba Lagi</string>
+    <string name="chip_recent">Terkini</string>
+    <string name="chip_recommendation">Rekomendasi Anda</string>
+
+    <!-- Favorite Fragment -->
+    <string name="favorite_title">Karya Favorit</string>
+    <string name="favorite_count">%1$d karya</string>
+    <string name="empty_favorite_title">Belum ada favorit</string>
+    <string name="empty_favorite_desc">Jelajahi koleksi dan simpan karya yang kamu sukai.</string>
+    <string name="start_exploring">Mulai Bereksplorasi</string>
+
+    <!-- User Fragment -->
+    <string name="default_user_name">Andi Budiman</string>
+    <string name="default_user_email">andi.budiman@example.com</string>
+    <string name="edit_profile">Edit Profil</string>
+    <string name="stat_collection">Koleksi</string>
+    <string name="stat_favorite">Favorit</string>
+    <string name="stat_visits">Kunjungan</string>
+    <string name="settings_title">PENGATURAN</string>
+    <string name="setting_theme">Tema Gelap / Terang</string>
+    <string name="setting_notifications">Notifikasi</string>
+    <string name="setting_about">Tentang Aplikasi</string>
+    <string name="setting_logout">Keluar</string>
+    <string name="feature_soon">Fitur segera hadir</string>
+    <string name="about_title">Tentang MUSE</string>
+    <string name="about_message">MUSE v1.0.0\n\nAplikasi eksplorasi koleksi seni museum menggunakan Art Institute of Chicago API.\nDibuat untuk Tugas Final Lab Mobile 2026.</string>
+    <string name="logout_confirm_title">Konfirmasi Keluar</string>
+    <string name="logout_confirm_message">Yakin ingin keluar?</string>
+    <string name="cancel">Batal</string>
+    <string name="ok">OK</string>
+</resources>

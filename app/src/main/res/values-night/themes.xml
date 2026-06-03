@@ -1,0 +1,37 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme for Night mode. -->
+    <style name="Theme.MUSE" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Primary brand color. -->
+        <item name="colorPrimary">@color/muse_gold</item>
+        <item name="colorOnPrimary">@color/black</item>
+        <item name="colorPrimaryContainer">#5D4600</item>
+        <item name="colorOnPrimaryContainer">#FFE082</item>
+
+        <!-- Secondary color. -->
+        <item name="colorSecondary">@color/muse_warm_brown</item>
+        <item name="colorOnSecondary">@color/white</item>
+
+        <!-- Status bar color. -->
+        <item name="android:statusBarColor">?attr/colorSurface</item>
+        <item name="android:windowLightStatusBar">false</item>
+
+        <!-- Background and surface. -->
+        <item name="android:windowBackground">@color/dark_background</item>
+        <item name="colorSurface">@color/dark_background</item>
+        <item name="colorSurfaceVariant">@color/dark_card</item>
+
+        <!-- Typography -->
+        <item name="textAppearanceHeadlineLarge">@style/TextAppearance.MUSE.Headline.Large</item>
+        <item name="textAppearanceHeadlineMedium">@style/TextAppearance.MUSE.Headline.Medium</item>
+    </style>
+
+    <style name="TextAppearance.MUSE.Headline.Large" parent="TextAppearance.Material3.HeadlineLarge">
+        <item name="android:fontFamily">@font/playfair_display</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.MUSE.Headline.Medium" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:fontFamily">@font/playfair_display</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+</resources>
