@@ -1,5 +1,6 @@
 package com.example.muse.activity;
 
+import android.app.Dialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -10,6 +11,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
@@ -22,6 +24,7 @@ import com.example.muse.model.Favorite;
 import com.example.muse.model.MetArtwork;
 import com.example.muse.model.MetObjectsResponse;
 import com.example.muse.network.RetrofitClient;
+import com.github.chrisbanes.photoview.PhotoView;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -37,14 +40,15 @@ public class DetailActivity extends AppCompatActivity {
 
     private ActivityDetailBinding binding;
     private RelatedArtworkAdapter relatedAdapter;
-    private final ExecutorService executorService = Executors.newFixedThreadPool(5);
-    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private ExecutorService executorService;
+    private Handler mainHandler;
     
     private DatabaseHelper dbHelper;
     private FavoriteDao favoriteDao;
     
     private int artworkId;
     private MetArtwork currentArtwork;
+    private String currentImageUrl;
     private boolean isDescriptionExpanded = false;
     private boolean isFavorited = false;
 
@@ -54,15 +58,17 @@ public class DetailActivity extends AppCompatActivity {
         binding = ActivityDetailBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        executorService = Executors.newFixedThreadPool(3);
+        mainHandler = new Handler(Looper.getMainLooper());
         dbHelper = DatabaseHelper.getInstance(this);
         favoriteDao = new FavoriteDao(dbHelper);
 
         Intent intent = getIntent();
         artworkId = intent.getIntExtra("artwork_id", -1);
         String initialTitle = intent.getStringExtra("title");
-        String initialImageUrl = intent.getStringExtra("image_url");
+        currentImageUrl = intent.getStringExtra("image_url");
 
-        setupUIInitial(initialTitle, initialImageUrl);
+        setupUIInitial(initialTitle, currentImageUrl);
         setupRecyclerView();
         loadArtworkDetail();
         checkIsFavorited();
@@ -71,6 +77,11 @@ public class DetailActivity extends AppCompatActivity {
         binding.btnShare.setOnClickListener(v -> shareArtwork());
         binding.btnFavorite.setOnClickListener(v -> toggleFavorite());
         binding.tvReadMore.setOnClickListener(v -> toggleDescription());
+        
+        // Fix 7: Fullscreen zoom
+        binding.ivArtworkDetail.setOnClickListener(v -> {
+            if (currentImageUrl != null) showFullscreenImage(currentImageUrl);
+        });
     }
 
     private void setupUIInitial(String title, String imageUrl) {
@@ -92,8 +103,11 @@ public class DetailActivity extends AppCompatActivity {
 
     private void setupRecyclerView() {
         relatedAdapter = new RelatedArtworkAdapter();
+        // Fix 8: Scroll fix
         binding.rvRelated.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         binding.rvRelated.setAdapter(relatedAdapter);
+        binding.rvRelated.setNestedScrollingEnabled(false);
+        binding.rvRelated.setHasFixedSize(false);
 
         relatedAdapter.setOnItemClickListener(artwork -> {
             Intent intent = new Intent(DetailActivity.this, DetailActivity.class);
@@ -111,9 +125,11 @@ public class DetailActivity extends AppCompatActivity {
                 Response<MetArtwork> response = RetrofitClient.getApiService().getObjectDetail(artworkId).execute();
 
                 mainHandler.post(() -> {
+                    if (isFinishing() || binding == null) return;
                     showLoading(false);
                     if (response.isSuccessful() && response.body() != null) {
                         currentArtwork = response.body();
+                        currentImageUrl = currentArtwork.getDisplayImage();
                         bindArtworkData(currentArtwork);
                         loadRelatedArtworks(currentArtwork.getClassification());
                     } else {
@@ -122,6 +138,7 @@ public class DetailActivity extends AppCompatActivity {
                 });
             } catch (Exception e) {
                 mainHandler.post(() -> {
+                    if (isFinishing() || binding == null) return;
                     showLoading(false);
                     Toast.makeText(DetailActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
                 });
@@ -172,7 +189,7 @@ public class DetailActivity extends AppCompatActivity {
                                     results.add(detail.body());
                                 }
                             } catch (Exception e) {
-                                Log.e("MUSE_M4", "Related error: " + e.getMessage());
+                                Log.e("MUSE_DETAIL", "Related error: " + e.getMessage());
                             } finally {
                                 latch.countDown();
                             }
@@ -180,10 +197,13 @@ public class DetailActivity extends AppCompatActivity {
                     }
 
                     latch.await(10, TimeUnit.SECONDS);
-                    mainHandler.post(() -> relatedAdapter.setData(new ArrayList<>(results)));
+                    mainHandler.post(() -> {
+                        if (isFinishing() || binding == null) return;
+                        relatedAdapter.setData(new ArrayList<>(results));
+                    });
                 }
             } catch (Exception e) {
-                Log.e("MUSE_M4", "Related load failed: " + e.getMessage());
+                Log.e("MUSE_DETAIL", "Related load failed: " + e.getMessage());
             }
         });
     }
@@ -220,6 +240,7 @@ public class DetailActivity extends AppCompatActivity {
                 isFavorited = true;
             }
             mainHandler.post(() -> {
+                if (isFinishing() || binding == null) return;
                 updateFavoriteButton();
                 Toast.makeText(DetailActivity.this, isFavorited ? "Ditambahkan ke Favorit" : "Dihapus dari Favorit", Toast.LENGTH_SHORT).show();
             });
@@ -240,6 +261,18 @@ public class DetailActivity extends AppCompatActivity {
         startActivity(Intent.createChooser(sendIntent, null));
     }
 
+    private void showFullscreenImage(String imageUrl) {
+        Dialog dialog = new Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        PhotoView photoView = new PhotoView(this);
+        Glide.with(this)
+                .load(imageUrl)
+                .placeholder(R.drawable.ic_placeholder)
+                .into(photoView);
+        photoView.setOnClickListener(v -> dialog.dismiss());
+        dialog.setContentView(photoView);
+        dialog.show();
+    }
+
     private void showLoading(boolean isLoading) {
         binding.progressBarDetail.setVisibility(isLoading ? View.VISIBLE : View.GONE);
     }
@@ -247,6 +280,7 @@ public class DetailActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        executorService.shutdown();
+        if (executorService != null) executorService.shutdownNow();
+        if (mainHandler != null) mainHandler.removeCallbacksAndMessages(null);
     }
 }

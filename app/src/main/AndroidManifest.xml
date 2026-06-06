@@ -3,6 +3,11 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Gallery access for Edit Profile (Fix 10) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
 
     <application
         android:allowBackup="true"
@@ -37,6 +42,12 @@
         <activity
             android:name=".activity.DetailActivity"
             android:exported="false" />
+
+        <!-- Edit Profile Activity (Fix 10) -->
+        <activity
+            android:name=".activity.EditProfileActivity"
+            android:parentActivityName=".activity.HomeActivity"
+            android:windowSoftInputMode="adjustResize" />
 
     </application>
 

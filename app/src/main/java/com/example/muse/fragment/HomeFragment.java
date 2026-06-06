@@ -1,6 +1,9 @@
 package com.example.muse.fragment;
 
+import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -8,6 +11,8 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.RotateAnimation;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -20,11 +25,10 @@ import com.example.muse.activity.DetailActivity;
 import com.example.muse.adapter.FeaturedArtworkAdapter;
 import com.example.muse.adapter.RecentArtworkAdapter;
 import com.example.muse.databinding.FragmentHomeBinding;
+import com.example.muse.model.FilterOptions;
 import com.example.muse.model.MetArtwork;
 import com.example.muse.model.MetObjectsResponse;
 import com.example.muse.network.RetrofitClient;
-import com.google.android.material.chip.Chip;
-import com.google.android.material.snackbar.Snackbar;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -43,6 +47,8 @@ public class HomeFragment extends Fragment {
     private RecentArtworkAdapter recentAdapter;
     private final ExecutorService executorService = Executors.newFixedThreadPool(5);
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    
+    private FilterOptions filterOptions = new FilterOptions();
 
     @Nullable
     @Override
@@ -57,41 +63,40 @@ public class HomeFragment extends Fragment {
 
         setupRecyclerViews();
         setupListeners();
-        loadAllData(null, null);
-
-        binding.btnRefresh.setOnClickListener(v -> loadAllData(null, null));
+        loadAllData();
     }
 
     private void setupListeners() {
         binding.tvSeeAll.setOnClickListener(v -> 
             Navigation.findNavController(v).navigate(R.id.navigation_search));
 
-        binding.chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
-            if (checkedIds.isEmpty()) {
-                loadRecentData("art", null);
-            } else {
-                Chip chip = group.findViewById(checkedIds.get(0));
-                String text = chip.getText().toString();
-                
-                if (text.equals(getString(R.string.category_all))) {
-                    loadRecentData("art", null);
-                } else if (text.equals(getString(R.string.category_painting))) {
-                    loadRecentData("painting", 11);
-                } else if (text.equals(getString(R.string.category_sculpture))) {
-                    loadRecentData("sculpture", 13);
-                } else if (text.equals(getString(R.string.category_photography))) {
-                    loadRecentData("photography", 19);
-                } else if (text.equals(getString(R.string.category_ceramic))) {
-                    loadRecentData("ceramics", 6);
-                }
-            }
-        });
-
         binding.btnSearch.setOnClickListener(v -> 
             Navigation.findNavController(v).navigate(R.id.navigation_search));
         
-        binding.btnMenu.setOnClickListener(v -> 
-            Snackbar.make(v, R.string.feature_soon, Snackbar.LENGTH_SHORT).show());
+        binding.btnMenu.setOnClickListener(v -> {
+            // Sidebar trigger will be handled in HomeActivity
+        });
+
+        binding.btnRefreshToolbar.setOnClickListener(v -> {
+            startRefreshAnimation();
+            loadAllData();
+        });
+
+        binding.btnRetryNetwork.setOnClickListener(v -> loadAllData());
+        binding.btnResetFilter.setOnClickListener(v -> {
+            filterOptions.reset();
+            loadAllData();
+        });
+    }
+
+    /**
+     * Fix for compilation error: Handlers filter changes from Sidebar
+     */
+    public void onFilterChanged(FilterOptions filterOptions) {
+        this.filterOptions = filterOptions;
+        if (isAdded()) {
+            loadAllData();
+        }
     }
 
     private void setupRecyclerViews() {
@@ -114,10 +119,22 @@ public class HomeFragment extends Fragment {
         startActivity(intent);
     }
 
-    private void loadAllData(@Nullable String query, @Nullable Integer deptId) {
+    private void loadAllData() {
+        if (!isNetworkAvailable()) {
+            showNetworkError();
+            return;
+        }
+
         showLoading(true);
         loadFeaturedData();
-        loadRecentData(query != null ? query : "art", deptId);
+        loadRecentData();
+    }
+
+    private boolean isNetworkAvailable() {
+        if (getContext() == null) return false;
+        ConnectivityManager cm = (ConnectivityManager) getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo info = cm.getActiveNetworkInfo();
+        return info != null && info.isConnected();
     }
 
     private void loadFeaturedData() {
@@ -128,17 +145,23 @@ public class HomeFragment extends Fragment {
                         .execute();
 
                 if (!resp.isSuccessful() || resp.body() == null || resp.body().getObjectIDs() == null) {
-                    mainHandler.post(this::showError);
+                    mainHandler.post(this::showEmptyState);
                     return;
                 }
 
-                List<Integer> ids = resp.body().getObjectIDs();
-                List<Integer> first10 = ids.subList(0, Math.min(10, ids.size()));
+                List<Integer> allIds = resp.body().getObjectIDs();
+                if (allIds.isEmpty()) {
+                    mainHandler.post(this::showEmptyState);
+                    return;
+                }
+
+                Collections.shuffle(allIds);
+                List<Integer> selectedIds = allIds.subList(0, Math.min(10, allIds.size()));
 
                 List<MetArtwork> results = Collections.synchronizedList(new ArrayList<>());
-                CountDownLatch latch = new CountDownLatch(first10.size());
+                CountDownLatch latch = new CountDownLatch(selectedIds.size());
 
-                for (int id : first10) {
+                for (int id : selectedIds) {
                     executorService.execute(() -> {
                         try {
                             Response<MetArtwork> detail = RetrofitClient.getApiService()
@@ -148,7 +171,7 @@ public class HomeFragment extends Fragment {
                                 results.add(detail.body());
                             }
                         } catch (Exception e) {
-                            Log.e("MUSE_M2", "Featured detail error: " + e.getMessage());
+                            Log.e("MUSE_HOME", "Detail error: " + e.getMessage());
                         } finally {
                             latch.countDown();
                         }
@@ -159,39 +182,43 @@ public class HomeFragment extends Fragment {
 
                 mainHandler.post(() -> {
                     if (results.isEmpty()) {
-                        showError();
+                        showEmptyState();
                     } else {
                         featuredAdapter.setData(new ArrayList<>(results));
+                        binding.rvFeatured.scrollToPosition(0);
                         showContent();
                     }
                 });
 
             } catch (Exception e) {
-                Log.e("MUSE_M2", "Featured error: " + e.getMessage());
-                mainHandler.post(this::showError);
+                mainHandler.post(this::showNetworkError);
             }
         });
     }
 
-    private void loadRecentData(String query, @Nullable Integer deptId) {
+    private void loadRecentData() {
         executorService.execute(() -> {
             try {
                 Response<MetObjectsResponse> resp = RetrofitClient.getApiService()
-                        .searchObjects(query, true, true, deptId)
+                        .searchWithFilters("art", true, true, 
+                                filterOptions.getDepartmentId(), 
+                                filterOptions.getDateBegin(), 
+                                filterOptions.getDateEnd(), 
+                                filterOptions.getGeoLocation())
                         .execute();
 
                 if (!resp.isSuccessful() || resp.body() == null || resp.body().getObjectIDs() == null) {
-                    mainHandler.post(this::showError);
                     return;
                 }
 
-                List<Integer> ids = resp.body().getObjectIDs();
-                List<Integer> first10 = ids.subList(0, Math.min(10, ids.size()));
+                List<Integer> allIds = resp.body().getObjectIDs();
+                Collections.shuffle(allIds);
+                List<Integer> selectedIds = allIds.subList(0, Math.min(10, allIds.size()));
 
                 List<MetArtwork> results = Collections.synchronizedList(new ArrayList<>());
-                CountDownLatch latch = new CountDownLatch(first10.size());
+                CountDownLatch latch = new CountDownLatch(selectedIds.size());
 
-                for (int id : first10) {
+                for (int id : selectedIds) {
                     executorService.execute(() -> {
                         try {
                             Response<MetArtwork> detail = RetrofitClient.getApiService()
@@ -201,7 +228,7 @@ public class HomeFragment extends Fragment {
                                 results.add(detail.body());
                             }
                         } catch (Exception e) {
-                            Log.e("MUSE_M2", "Recent detail error: " + e.getMessage());
+                            Log.e("MUSE_HOME", "Detail error: " + e.getMessage());
                         } finally {
                             latch.countDown();
                         }
@@ -211,17 +238,14 @@ public class HomeFragment extends Fragment {
                 latch.await(15, TimeUnit.SECONDS);
 
                 mainHandler.post(() -> {
-                    if (results.isEmpty()) {
-                        showError();
-                    } else {
+                    if (!results.isEmpty()) {
                         recentAdapter.setData(new ArrayList<>(results));
-                        showContent();
+                        binding.rvRecent.scrollToPosition(0);
                     }
                 });
 
             } catch (Exception e) {
-                Log.e("MUSE_M2", "Recent error: " + e.getMessage());
-                mainHandler.post(this::showError);
+                Log.e("MUSE_HOME", "Recent error: " + e.getMessage());
             }
         });
     }
@@ -231,6 +255,10 @@ public class HomeFragment extends Fragment {
         if (isLoading) {
             binding.rvFeatured.setVisibility(View.GONE);
             binding.rvRecent.setVisibility(View.GONE);
+            binding.featuredHeader.setVisibility(View.GONE);
+            binding.recentHeader.setVisibility(View.GONE);
+            binding.layoutNetworkError.setVisibility(View.GONE);
+            binding.layoutEmptyFilter.setVisibility(View.GONE);
         }
     }
 
@@ -238,15 +266,31 @@ public class HomeFragment extends Fragment {
         binding.progressBar.setVisibility(View.GONE);
         binding.rvFeatured.setVisibility(View.VISIBLE);
         binding.rvRecent.setVisibility(View.VISIBLE);
-        binding.btnRefresh.setVisibility(View.GONE);
+        binding.featuredHeader.setVisibility(View.VISIBLE);
+        binding.recentHeader.setVisibility(View.VISIBLE);
+        binding.layoutNetworkError.setVisibility(View.GONE);
+        binding.layoutEmptyFilter.setVisibility(View.GONE);
+        binding.btnRefreshToolbar.clearAnimation();
     }
 
-    private void showError() {
+    private void showNetworkError() {
         showLoading(false);
-        binding.btnRefresh.setVisibility(View.VISIBLE);
-        if (getContext() != null) {
-            Snackbar.make(binding.getRoot(), R.string.error_network, Snackbar.LENGTH_LONG).show();
-        }
+        binding.layoutNetworkError.setVisibility(View.VISIBLE);
+        binding.btnRefreshToolbar.clearAnimation();
+    }
+
+    private void showEmptyState() {
+        showLoading(false);
+        binding.layoutEmptyFilter.setVisibility(View.VISIBLE);
+        binding.btnRefreshToolbar.clearAnimation();
+    }
+
+    private void startRefreshAnimation() {
+        RotateAnimation rotate = new RotateAnimation(0, 360, 
+                Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
+        rotate.setDuration(1000);
+        rotate.setRepeatCount(Animation.INFINITE);
+        binding.btnRefreshToolbar.startAnimation(rotate);
     }
 
     @Override

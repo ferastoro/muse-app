@@ -27,38 +27,6 @@
             app:queryHint="@string/search_hint" />
     </com.google.android.material.card.MaterialCardView>
 
-    <HorizontalScrollView
-        android:id="@+id/chipScroll"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:scrollbars="none"
-        app:layout_constraintTop_toBottomOf="@id/searchCard">
-
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/chipGroupSearch"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingHorizontal="16dp"
-            app:singleLine="true"
-            app:singleSelection="true">
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipRecent"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/chip_recent" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipRecommend"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/chip_recommendation" />
-        </com.google.android.material.chip.ChipGroup>
-    </HorizontalScrollView>
-
     <!-- Results Header -->
     <LinearLayout
         android:id="@+id/resultsHeader"
@@ -68,7 +36,7 @@
         android:orientation="horizontal"
         android:paddingHorizontal="16dp"
         android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/chipScroll">
+        app:layout_constraintTop_toBottomOf="@id/searchCard">
 
         <TextView
             android:layout_width="0dp"
@@ -101,17 +69,18 @@
         app:layout_constraintTop_toBottomOf="@id/resultsHeader"
         tools:listitem="@layout/item_artwork_search" />
 
-    <!-- Empty State -->
+    <!-- Fix 3: Empty Filter State -->
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/layoutEmpty"
+        android:id="@+id/layoutEmptyFilter"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="32dp"
+        android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/chipScroll">
+        app:layout_constraintTop_toBottomOf="@id/searchCard">
 
         <ImageView
-            android:id="@+id/ivEmptyIcon"
+            android:id="@+id/ivEmptyFilterIcon"
             android:layout_width="100dp"
             android:layout_height="100dp"
             android:alpha="0.3"
@@ -122,57 +91,57 @@
             app:tint="?attr/colorOnSurface" />
 
         <TextView
-            android:id="@+id/tvEmptyTitle"
+            android:id="@+id/tvEmptyFilterTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:fontFamily="@font/playfair_display"
-            android:text="@string/not_found_title"
+            android:text="Tidak ada karya untuk filter ini"
             android:textColor="?attr/colorOnSurface"
             android:textSize="20sp"
             android:textStyle="bold"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/ivEmptyIcon" />
+            app:layout_constraintTop_toBottomOf="@id/ivEmptyFilterIcon" />
 
         <TextView
-            android:id="@+id/tvEmptyDesc"
+            android:id="@+id/tvEmptyFilterDesc"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:alpha="0.7"
             android:gravity="center"
-            android:text="@string/not_found_desc"
+            android:text="Coba ubah pilihan filter"
             android:textColor="?attr/colorOnSurface"
             android:textSize="14sp"
-            app:layout_constraintTop_toBottomOf="@id/tvEmptyTitle" />
+            app:layout_constraintTop_toBottomOf="@id/tvEmptyFilterTitle" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnExplore"
+            android:id="@+id/btnResetFilter"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="@string/explore_collection"
+            android:text="Reset Filter"
             android:textColor="@color/muse_gold"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvEmptyDesc"
+            app:layout_constraintTop_toBottomOf="@id/tvEmptyFilterDesc"
             app:strokeColor="@color/muse_gold" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- Error State -->
+    <!-- Fix 3: Network Error State -->
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/layoutError"
+        android:id="@+id/layoutNetworkError"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="32dp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/chipScroll">
+        app:layout_constraintTop_toBottomOf="@id/searchCard">
 
         <ImageView
-            android:id="@+id/ivErrorIcon"
+            android:id="@+id/ivNetworkErrorIcon"
             android:layout_width="100dp"
             android:layout_height="100dp"
             android:alpha="0.3"
@@ -183,28 +152,28 @@
             app:tint="?attr/colorOnSurface" />
 
         <TextView
+            android:id="@+id/tvNetworkErrorText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="@string/error_network"
+            android:text="Tidak ada koneksi internet"
             android:textColor="?attr/colorOnSurface"
             android:textSize="16sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/ivErrorIcon" />
+            app:layout_constraintTop_toBottomOf="@id/ivNetworkErrorIcon" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnRetry"
+            android:id="@+id/btnRetryNetwork"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="@string/retry"
+            android:text="Coba Lagi"
             android:textColor="@color/black"
             app:backgroundTint="@color/muse_gold"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/ivErrorIcon"
-            android:layout_marginBottom="16dp" />
+            app:layout_constraintTop_toBottomOf="@id/tvNetworkErrorText" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <ProgressBar

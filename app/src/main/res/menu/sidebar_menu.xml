@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:title="ERA / PERIODE">
+        <menu>
+            <group android:id="@+id/group_era" android:checkableBehavior="single">
+                <item android:id="@+id/era_all" android:title="Semua Era" android:checked="true" />
+                <item android:id="@+id/era_ancient" android:title="Kuno (500 SM)" />
+                <item android:id="@+id/era_medieval" android:title="Abad Pertengahan" />
+                <item android:id="@+id/era_renaissance" android:title="Renaissance" />
+                <item android:id="@+id/era_baroque" android:title="Baroque &amp; Klasik" />
+                <item android:id="@+id/era_19" android:title="Abad 19" />
+                <item android:id="@+id/era_20" android:title="Abad 20" />
+                <item android:id="@+id/era_contemporary" android:title="Kontemporer" />
+            </group>
+        </menu>
+    </item>
+    <item android:title="ASAL WILAYAH">
+        <menu>
+            <group android:id="@+id/group_loc" android:checkableBehavior="single">
+                <item android:id="@+id/loc_all" android:title="Semua Wilayah" android:checked="true" />
+                <item android:id="@+id/loc_europe" android:title="Eropa" />
+                <item android:id="@+id/loc_america" android:title="Amerika" />
+                <item android:id="@+id/loc_asia" android:title="Asia" />
+                <item android:id="@+id/loc_africa" android:title="Afrika" />
+                <item android:id="@+id/loc_middleeast" android:title="Timur Tengah" />
+                <item android:id="@+id/loc_egypt" android:title="Mesir Kuno" />
+            </group>
+        </menu>
+    </item>
+    <item android:title="TIPE KARYA">
+        <menu>
+            <group android:id="@+id/group_type" android:checkableBehavior="single">
+                <item android:id="@+id/type_all" android:title="Semua Tipe" android:checked="true" />
+                <item android:id="@+id/type_painting" android:title="Lukisan" />
+                <item android:id="@+id/type_sculpture" android:title="Patung" />
+                <item android:id="@+id/type_photo" android:title="Fotografi" />
+                <item android:id="@+id/type_decorative" android:title="Seni Dekoratif" />
+                <item android:id="@+id/type_weapon" android:title="Senjata &amp; Armor" />
+            </group>
+        </menu>
+    </item>
+</menu>

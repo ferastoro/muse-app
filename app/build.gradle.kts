@@ -59,6 +59,9 @@ dependencies {
     // OkHttp Logging
     implementation(libs.okhttp.logging)
 
+    // PhotoView for Zoom (Fix 7)
+    implementation("com.github.chrisbanes:PhotoView:2.3.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)

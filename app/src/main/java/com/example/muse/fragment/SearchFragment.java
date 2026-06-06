@@ -1,6 +1,9 @@
 package com.example.muse.fragment;
 
+import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -20,10 +23,10 @@ import com.example.muse.R;
 import com.example.muse.activity.DetailActivity;
 import com.example.muse.adapter.SearchArtworkAdapter;
 import com.example.muse.databinding.FragmentSearchBinding;
+import com.example.muse.model.FilterOptions;
 import com.example.muse.model.MetArtwork;
 import com.example.muse.model.MetObjectsResponse;
 import com.example.muse.network.RetrofitClient;
-import com.google.android.material.chip.Chip;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,7 +47,8 @@ public class SearchFragment extends Fragment {
     private final Handler searchHandler = new Handler(Looper.getMainLooper());
     private Runnable searchRunnable;
     private String currentQuery = "";
-    private Integer selectedDepartmentId = null;
+    
+    private FilterOptions filterOptions = new FilterOptions();
 
     @Nullable
     @Override
@@ -59,10 +63,19 @@ public class SearchFragment extends Fragment {
 
         setupRecyclerView();
         setupSearchView();
-        setupFilters();
         setupButtons();
 
-        showEmptyState(true);
+        showEmptyFilterState(true);
+    }
+
+    // FIX: Add onFilterChanged to resolve compilation error and enable dynamic filtering
+    public void onFilterChanged(FilterOptions filterOptions) {
+        this.filterOptions = filterOptions;
+        if (isAdded() && !currentQuery.isEmpty()) {
+            performSearch(currentQuery);
+        } else if (isAdded() && currentQuery.isEmpty()) {
+            showEmptyFilterState(true);
+        }
     }
 
     private void setupRecyclerView() {
@@ -99,7 +112,7 @@ public class SearchFragment extends Fragment {
                 }
 
                 if (newText.isEmpty()) {
-                    showEmptyState(true);
+                    showEmptyFilterState(true);
                 } else {
                     searchRunnable = () -> performSearch(newText);
                     searchHandler.postDelayed(searchRunnable, 500);
@@ -109,46 +122,40 @@ public class SearchFragment extends Fragment {
         });
     }
 
-    private void setupFilters() {
-        binding.chipGroupSearch.setOnCheckedStateChangeListener((group, checkedIds) -> {
-            if (checkedIds.isEmpty()) {
-                selectedDepartmentId = null;
-            } else {
-                Chip chip = group.findViewById(checkedIds.get(0));
-                String text = chip.getText().toString();
-                if (text.equals(getString(R.string.chip_recommendation))) {
-                    selectedDepartmentId = 11; // Paintings
-                } else {
-                    selectedDepartmentId = null;
-                }
-            }
-            if (!currentQuery.isEmpty()) {
-                performSearch(currentQuery);
-            }
-        });
-    }
-
     private void setupButtons() {
-        binding.btnRetry.setOnClickListener(v -> performSearch(currentQuery));
-        binding.btnExplore.setOnClickListener(v -> {
-            Navigation.findNavController(v).navigate(R.id.navigation_home);
+        binding.btnRetryNetwork.setOnClickListener(v -> performSearch(currentQuery));
+        binding.btnResetFilter.setOnClickListener(v -> {
+            filterOptions.reset();
+            performSearch(currentQuery);
         });
     }
 
     private void performSearch(String query) {
         if (query.isEmpty()) return;
 
+        if (!isNetworkAvailable()) {
+            showNetworkError();
+            return;
+        }
+
         showLoading();
         executorService.execute(() -> {
             try {
                 Response<MetObjectsResponse> response = RetrofitClient.getApiService()
-                        .searchObjects(query, true, true, selectedDepartmentId)
+                        .searchWithFilters(query, true, true, 
+                                filterOptions.getDepartmentId(),
+                                filterOptions.getDateBegin(),
+                                filterOptions.getDateEnd(),
+                                filterOptions.getGeoLocation())
                         .execute();
 
-                if (response.isSuccessful() && response.body() != null && response.body().getObjectIDs() != null) {
+                if (response.isSuccessful() && response.body() != null) {
+                    Log.d("MUSE_SEARCH", "SEARCH_SUCCESS");
                     List<Integer> ids = response.body().getObjectIDs();
-                    if (ids.isEmpty()) {
-                        mainHandler.post(() -> showEmptyState(false));
+                    
+                    if (ids == null || ids.isEmpty()) {
+                        Log.d("MUSE_SEARCH", "SEARCH_EMPTY");
+                        mainHandler.post(() -> showEmptyFilterState(false));
                         return;
                     }
 
@@ -164,7 +171,7 @@ public class SearchFragment extends Fragment {
                                     results.add(detail.body());
                                 }
                             } catch (Exception e) {
-                                Log.e("MUSE_M3", "Search detail error: " + e.getMessage());
+                                Log.e("MUSE_SEARCH", "Detail fetch failed for ID: " + id);
                             } finally {
                                 latch.countDown();
                             }
@@ -175,62 +182,72 @@ public class SearchFragment extends Fragment {
 
                     mainHandler.post(() -> {
                         if (results.isEmpty()) {
-                            showEmptyState(false);
+                            Log.d("MUSE_SEARCH", "SEARCH_EMPTY (details failed)");
+                            showEmptyFilterState(false);
                         } else {
                             showResults(new ArrayList<>(results));
                         }
                     });
                 } else {
-                    mainHandler.post(this::showError);
+                    Log.e("MUSE_SEARCH", "SEARCH_NETWORK_ERROR: Response not successful");
+                    mainHandler.post(this::showNetworkError);
                 }
+            } catch (java.io.IOException e) {
+                Log.e("MUSE_SEARCH", "SEARCH_NETWORK_ERROR: Connection failed", e);
+                mainHandler.post(this::showNetworkError);
             } catch (Exception e) {
-                Log.e("MUSE_M3", "Search error: " + e.getMessage());
-                mainHandler.post(this::showError);
+                Log.e("MUSE_SEARCH", "SEARCH_NETWORK_ERROR: Unexpected error", e);
+                mainHandler.post(this::showNetworkError);
             }
         });
+    }
+
+    private boolean isNetworkAvailable() {
+        if (getContext() == null) return false;
+        ConnectivityManager cm = (ConnectivityManager) getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo info = cm.getActiveNetworkInfo();
+        return info != null && info.isConnected();
     }
 
     private void showLoading() {
         binding.progressBar.setVisibility(View.VISIBLE);
         binding.rvSearchResults.setVisibility(View.GONE);
         binding.resultsHeader.setVisibility(View.GONE);
-        binding.layoutEmpty.setVisibility(View.GONE);
-        binding.layoutError.setVisibility(View.GONE);
+        binding.layoutEmptyFilter.setVisibility(View.GONE);
+        binding.layoutNetworkError.setVisibility(View.GONE);
     }
 
     private void showResults(List<MetArtwork> results) {
         binding.progressBar.setVisibility(View.GONE);
         binding.rvSearchResults.setVisibility(View.VISIBLE);
         binding.resultsHeader.setVisibility(View.VISIBLE);
-        binding.layoutEmpty.setVisibility(View.GONE);
-        binding.layoutError.setVisibility(View.GONE);
+        binding.layoutEmptyFilter.setVisibility(View.GONE);
+        binding.layoutNetworkError.setVisibility(View.GONE);
 
         adapter.setData(results);
         binding.tvResultCount.setText(getString(R.string.search_results_count, results.size()));
     }
 
-    private void showEmptyState(boolean isInitial) {
+    private void showEmptyFilterState(boolean isInitial) {
         binding.progressBar.setVisibility(View.GONE);
         binding.rvSearchResults.setVisibility(View.GONE);
         binding.resultsHeader.setVisibility(View.GONE);
-        binding.layoutEmpty.setVisibility(View.VISIBLE);
-        binding.layoutError.setVisibility(View.GONE);
-
+        binding.layoutEmptyFilter.setVisibility(View.VISIBLE);
+        binding.layoutNetworkError.setVisibility(View.GONE);
+        
         if (isInitial) {
-            binding.tvEmptyTitle.setText(R.string.title_search);
-            binding.tvEmptyDesc.setText(R.string.search_hint);
+            binding.btnResetFilter.setVisibility(View.GONE);
         } else {
-            binding.tvEmptyTitle.setText(R.string.not_found_title);
-            binding.tvEmptyDesc.setText(R.string.not_found_desc);
+            binding.btnResetFilter.setVisibility(View.VISIBLE);
         }
     }
 
-    private void showError() {
+    private void showNetworkError() {
         binding.progressBar.setVisibility(View.GONE);
         binding.rvSearchResults.setVisibility(View.GONE);
         binding.resultsHeader.setVisibility(View.GONE);
-        binding.layoutEmpty.setVisibility(View.GONE);
-        binding.layoutError.setVisibility(View.VISIBLE);
+        binding.layoutEmptyFilter.setVisibility(View.GONE);
+        binding.layoutNetworkError.setVisibility(View.VISIBLE);
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.example.muse.fragment;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -16,12 +17,13 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 
+import com.bumptech.glide.Glide;
 import com.example.muse.R;
+import com.example.muse.activity.EditProfileActivity;
 import com.example.muse.activity.LoginActivity;
 import com.example.muse.database.DatabaseHelper;
 import com.example.muse.database.FavoriteDao;
 import com.example.muse.databinding.FragmentUserBinding;
-import com.google.android.material.snackbar.Snackbar;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,8 +34,11 @@ public class UserFragment extends Fragment {
     private SharedPreferences sharedPreferences;
     private DatabaseHelper dbHelper;
     private FavoriteDao favoriteDao;
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
-    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    
+    // Fix 9: Crash prevention pattern
+    private ExecutorService executor;
+    private Handler handler;
+    private boolean isFragmentActive = false;
 
     @Nullable
     @Override
@@ -45,28 +50,42 @@ public class UserFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
+        isFragmentActive = true;
+        executor = Executors.newFixedThreadPool(3);
+        handler = new Handler(Looper.getMainLooper());
+        
         sharedPreferences = requireActivity().getSharedPreferences("muse_prefs", Context.MODE_PRIVATE);
 
-        setupUserData();
         setupThemeSwitch();
         setupClickListeners();
         setupStaticStats();
     }
 
-    private void setupUserData() {
-        String name = sharedPreferences.getString("userName", "Museum Guest");
-        binding.tvName.setText(name);
-        
-        // Dynamic email based on name
-        String email = name.toLowerCase().replace(" ", ".") + "@muse.com";
-        binding.tvEmail.setText(email);
-    }
-
     @Override
     public void onResume() {
         super.onResume();
+        // Fix 10: Load data in onResume to catch updates from EditProfileActivity
+        loadUserData();
         updateFavoriteStat();
+    }
+
+    private void loadUserData() {
+        String name = sharedPreferences.getString("user_name", "Andi Budiman");
+        String email = sharedPreferences.getString("user_email", "andi@example.com");
+        String avatarUri = sharedPreferences.getString("user_avatar", null);
+
+        binding.tvName.setText(name);
+        binding.tvEmail.setText(email);
+
+        if (avatarUri != null) {
+            Glide.with(this)
+                    .load(Uri.parse(avatarUri))
+                    .circleCrop()
+                    .placeholder(R.drawable.ic_avatar_placeholder)
+                    .into(binding.ivAvatar);
+        } else {
+            binding.ivAvatar.setImageResource(R.drawable.ic_avatar_placeholder);
+        }
     }
 
     private void setupThemeSwitch() {
@@ -87,10 +106,11 @@ public class UserFragment extends Fragment {
     }
 
     private void setupClickListeners() {
-        binding.btnEditProfile.setOnClickListener(v -> showSoonSnackbar(v));
-        binding.itemNotifications.setOnClickListener(v -> showSoonSnackbar(v));
+        // Fix 10: Open EditProfileActivity
+        binding.btnEditProfile.setOnClickListener(v -> {
+            startActivity(new Intent(getActivity(), EditProfileActivity.class));
+        });
 
-        binding.itemAbout.setOnClickListener(v -> showAboutDialog());
         binding.itemLogout.setOnClickListener(v -> showLogoutDialog());
     }
 
@@ -105,26 +125,14 @@ public class UserFragment extends Fragment {
             favoriteDao = new FavoriteDao(dbHelper);
         }
 
-        executorService.execute(() -> {
+        executor.execute(() -> {
             int count = favoriteDao.getFavoritesCount();
-            mainHandler.post(() -> {
-                if (binding != null) {
-                    binding.tvStatFavorit.setText(String.valueOf(count));
-                }
+            handler.post(() -> {
+                // Fix 9: Check fragment state
+                if (!isFragmentActive || binding == null) return;
+                binding.tvStatFavorit.setText(String.valueOf(count));
             });
         });
-    }
-
-    private void showSoonSnackbar(View view) {
-        Snackbar.make(view, R.string.feature_soon, Snackbar.LENGTH_SHORT).show();
-    }
-
-    private void showAboutDialog() {
-        new AlertDialog.Builder(requireContext())
-                .setTitle(R.string.about_title)
-                .setMessage(R.string.about_message)
-                .setPositiveButton(R.string.ok, null)
-                .show();
     }
 
     private void showLogoutDialog() {
@@ -133,16 +141,17 @@ public class UserFragment extends Fragment {
                 .setMessage(R.string.logout_confirm_message)
                 .setNegativeButton(R.string.cancel, null)
                 .setPositiveButton(R.string.setting_logout, (dialog, which) -> {
-                    // Clear session but keep theme settings
                     sharedPreferences.edit()
                             .putBoolean("isLoggedIn", false)
-                            .remove("userName")
+                            .remove("userName") // From previous logic
+                            .remove("user_name")
+                            .remove("user_email")
+                            .remove("user_avatar")
                             .apply();
 
                     Intent intent = new Intent(requireActivity(), LoginActivity.class);
                     intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                     startActivity(intent);
-                    // No need to finish fragment's activity manually here, CLEAR_TASK handles it
                 })
                 .show();
     }
@@ -150,12 +159,9 @@ public class UserFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        isFragmentActive = false;
+        if (executor != null) executor.shutdownNow();
+        if (handler != null) handler.removeCallbacksAndMessages(null);
         binding = null;
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        executorService.shutdown();
     }
 }
