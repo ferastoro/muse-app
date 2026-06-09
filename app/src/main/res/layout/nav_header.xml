@@ -1,28 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="160dp"
-    android:background="@drawable/splash_overlay"
+    android:layout_height="180dp"
+    android:background="@drawable/bg_gradient_overlay"
     android:gravity="bottom"
     android:orientation="vertical"
     android:padding="20dp">
 
     <TextView
+        android:id="@+id/tvHeaderTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:fontFamily="@font/playfair_display"
         android:text="Filter Koleksi"
         android:textColor="@color/muse_gold"
-        android:textSize="22sp"
+        android:textSize="24sp"
         android:textStyle="bold" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:alpha="0.7"
         android:text="Sesuaikan tampilan koleksi"
-        android:textColor="@color/white"
+        android:textColor="#BDBDBD"
         android:textSize="14sp" />
 
 </LinearLayout>

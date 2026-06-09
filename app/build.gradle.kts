@@ -13,6 +13,12 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        buildConfigField(
+            "String",
+            "HARVARD_API_KEY",
+            "\"${project.findProperty("HARVARD_API_KEY") ?: ""}\""
+        )
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -31,6 +37,7 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 }
 
@@ -55,6 +62,9 @@ dependencies {
     
     // RecyclerView
     implementation(libs.recyclerview)
+
+    // SwipeRefreshLayout
+    implementation(libs.swiperefreshlayout)
     
     // OkHttp Logging
     implementation(libs.okhttp.logging)

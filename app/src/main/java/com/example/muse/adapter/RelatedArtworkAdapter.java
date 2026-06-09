@@ -1,77 +1,52 @@
 package com.example.muse.adapter;
 
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
-
+import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.example.muse.R;
-import com.example.muse.databinding.ItemArtworkRelatedBinding;
-import com.example.muse.model.MetArtwork;
-
-import java.util.ArrayList;
+import com.example.muse.model.HarvardArtwork;
 import java.util.List;
 
 public class RelatedArtworkAdapter extends RecyclerView.Adapter<RelatedArtworkAdapter.ViewHolder> {
+    private List<HarvardArtwork> artworks;
 
-    private List<MetArtwork> artworks = new ArrayList<>();
-    private OnItemClickListener listener;
-
-    public interface OnItemClickListener {
-        void onItemClick(MetArtwork artwork);
-    }
-
-    public void setOnItemClickListener(OnItemClickListener listener) {
-        this.listener = listener;
-    }
-
-    public void setData(List<MetArtwork> artworks) {
+    public RelatedArtworkAdapter(List<HarvardArtwork> artworks) {
         this.artworks = artworks;
-        notifyDataSetChanged();
     }
 
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        ItemArtworkRelatedBinding binding = ItemArtworkRelatedBinding.inflate(
-                LayoutInflater.from(parent.getContext()), parent, false);
-        return new ViewHolder(binding);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_artwork_related, parent, false);
+        return new ViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        MetArtwork artwork = artworks.get(position);
-        holder.binding.tvTitle.setText(artwork.getTitle());
-        holder.binding.tvArtist.setText(artwork.getArtistDisplayName());
-
-        Glide.with(holder.itemView.getContext())
+        HarvardArtwork artwork = artworks.get(position);
+        
+        // FIX 2: Glide call yang benar
+        Glide.with(holder.image.getContext())
                 .load(artwork.getDisplayImage())
                 .diskCacheStrategy(DiskCacheStrategy.ALL)
                 .placeholder(R.drawable.ic_placeholder)
                 .error(R.drawable.ic_placeholder)
-                .into(holder.binding.ivArtwork);
-
-        holder.itemView.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onItemClick(artwork);
-            }
-        });
+                .into(holder.image);
     }
 
     @Override
-    public int getItemCount() {
-        return artworks.size();
-    }
+    public int getItemCount() { return artworks.size(); }
 
-    static class ViewHolder extends RecyclerView.ViewHolder {
-        ItemArtworkRelatedBinding binding;
-
-        ViewHolder(ItemArtworkRelatedBinding binding) {
-            super(binding.getRoot());
-            this.binding = binding;
+    public static class ViewHolder extends RecyclerView.ViewHolder {
+        ImageView image;
+        public ViewHolder(View itemView) {
+            super(itemView);
+            image = itemView.findViewById(R.id.ivArtwork);
         }
     }
 }

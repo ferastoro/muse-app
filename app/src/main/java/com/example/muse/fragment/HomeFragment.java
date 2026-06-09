@@ -1,54 +1,41 @@
 package com.example.muse.fragment;
 
-import android.content.Context;
-import android.content.Intent;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.Animation;
-import android.view.animation.RotateAnimation;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.example.muse.BuildConfig;
 import com.example.muse.R;
-import com.example.muse.activity.DetailActivity;
+import com.example.muse.activity.HomeActivity;
 import com.example.muse.adapter.FeaturedArtworkAdapter;
 import com.example.muse.adapter.RecentArtworkAdapter;
 import com.example.muse.databinding.FragmentHomeBinding;
 import com.example.muse.model.FilterOptions;
-import com.example.muse.model.MetArtwork;
-import com.example.muse.model.MetObjectsResponse;
+import com.example.muse.model.HarvardArtwork;
+import com.example.muse.model.HarvardListResponse;
 import com.example.muse.network.RetrofitClient;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.Random;
 
+import retrofit2.Call;
+import retrofit2.Callback;
 import retrofit2.Response;
 
 public class HomeFragment extends Fragment {
-
     private FragmentHomeBinding binding;
-    private FeaturedArtworkAdapter featuredAdapter;
-    private RecentArtworkAdapter recentAdapter;
-    private final ExecutorService executorService = Executors.newFixedThreadPool(5);
-    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private static List<HarvardArtwork> cachedFeatured = null;
+    private static List<HarvardArtwork> cachedRecent = null;
+    private FilterOptions currentFilters = new FilterOptions();
     
-    private FilterOptions filterOptions = new FilterOptions();
+    private final String FIELDS = "id,title,primaryimageurl,people,dated,medium,culture,classification,description,imagepermissionlevel";
 
     @Nullable
     @Override
@@ -62,235 +49,150 @@ public class HomeFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         setupRecyclerViews();
-        setupListeners();
-        loadAllData();
-    }
+        setupButtons();
+        setupSwipeRefresh();
 
-    private void setupListeners() {
-        binding.tvSeeAll.setOnClickListener(v -> 
-            Navigation.findNavController(v).navigate(R.id.navigation_search));
-
-        binding.btnSearch.setOnClickListener(v -> 
-            Navigation.findNavController(v).navigate(R.id.navigation_search));
-        
-        binding.btnMenu.setOnClickListener(v -> {
-            // Sidebar trigger will be handled in HomeActivity
-        });
-
-        binding.btnRefreshToolbar.setOnClickListener(v -> {
-            startRefreshAnimation();
-            loadAllData();
-        });
-
-        binding.btnRetryNetwork.setOnClickListener(v -> loadAllData());
-        binding.btnResetFilter.setOnClickListener(v -> {
-            filterOptions.reset();
-            loadAllData();
-        });
-    }
-
-    /**
-     * Fix for compilation error: Handlers filter changes from Sidebar
-     */
-    public void onFilterChanged(FilterOptions filterOptions) {
-        this.filterOptions = filterOptions;
-        if (isAdded()) {
-            loadAllData();
+        if (cachedFeatured == null || cachedRecent == null) {
+            loadData();
+        } else {
+            displayCachedData();
         }
     }
 
     private void setupRecyclerViews() {
-        featuredAdapter = new FeaturedArtworkAdapter();
         binding.rvFeatured.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
-        binding.rvFeatured.setAdapter(featuredAdapter);
-
-        recentAdapter = new RecentArtworkAdapter();
         binding.rvRecent.setLayoutManager(new LinearLayoutManager(getContext()));
-        binding.rvRecent.setAdapter(recentAdapter);
-
-        featuredAdapter.setOnItemClickListener(this::navigateToDetail);
-        recentAdapter.setOnItemClickListener(this::navigateToDetail);
     }
 
-    private void navigateToDetail(MetArtwork artwork) {
-        Intent intent = new Intent(getActivity(), DetailActivity.class);
-        intent.putExtra("artwork_id", artwork.getObjectID());
-        intent.putExtra("title", artwork.getTitle());
-        startActivity(intent);
-    }
-
-    private void loadAllData() {
-        if (!isNetworkAvailable()) {
-            showNetworkError();
-            return;
-        }
-
-        showLoading(true);
-        loadFeaturedData();
-        loadRecentData();
-    }
-
-    private boolean isNetworkAvailable() {
-        if (getContext() == null) return false;
-        ConnectivityManager cm = (ConnectivityManager) getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo info = cm.getActiveNetworkInfo();
-        return info != null && info.isConnected();
-    }
-
-    private void loadFeaturedData() {
-        executorService.execute(() -> {
-            try {
-                Response<MetObjectsResponse> resp = RetrofitClient.getApiService()
-                        .getHighlightObjects(true, true, true, "painting")
-                        .execute();
-
-                if (!resp.isSuccessful() || resp.body() == null || resp.body().getObjectIDs() == null) {
-                    mainHandler.post(this::showEmptyState);
-                    return;
-                }
-
-                List<Integer> allIds = resp.body().getObjectIDs();
-                if (allIds.isEmpty()) {
-                    mainHandler.post(this::showEmptyState);
-                    return;
-                }
-
-                Collections.shuffle(allIds);
-                List<Integer> selectedIds = allIds.subList(0, Math.min(10, allIds.size()));
-
-                List<MetArtwork> results = Collections.synchronizedList(new ArrayList<>());
-                CountDownLatch latch = new CountDownLatch(selectedIds.size());
-
-                for (int id : selectedIds) {
-                    executorService.execute(() -> {
-                        try {
-                            Response<MetArtwork> detail = RetrofitClient.getApiService()
-                                    .getObjectDetail(id)
-                                    .execute();
-                            if (detail.isSuccessful() && detail.body() != null && detail.body().getDisplayImage() != null) {
-                                results.add(detail.body());
-                            }
-                        } catch (Exception e) {
-                            Log.e("MUSE_HOME", "Detail error: " + e.getMessage());
-                        } finally {
-                            latch.countDown();
-                        }
-                    });
-                }
-
-                latch.await(15, TimeUnit.SECONDS);
-
-                mainHandler.post(() -> {
-                    if (results.isEmpty()) {
-                        showEmptyState();
-                    } else {
-                        featuredAdapter.setData(new ArrayList<>(results));
-                        binding.rvFeatured.scrollToPosition(0);
-                        showContent();
-                    }
-                });
-
-            } catch (Exception e) {
-                mainHandler.post(this::showNetworkError);
+    private void setupButtons() {
+        binding.btnMenu.setOnClickListener(v -> {
+            if (getActivity() instanceof HomeActivity) {
+                ((HomeActivity) getActivity()).openDrawer();
             }
+        });
+
+        binding.btnRefreshToolbar.setOnClickListener(v -> {
+            refreshData();
+        });
+
+        binding.btnSearch.setOnClickListener(v -> {
+            if (getActivity() != null) {
+                BottomNavigationView nav = getActivity().findViewById(R.id.bottom_navigation);
+                if (nav != null) {
+                    nav.setSelectedItemId(R.id.navigation_search);
+                }
+            }
+        });
+
+        // Retry and Reset buttons (Direct access via binding as they are inline in fragment_home.xml)
+        binding.btnRetryNetwork.setOnClickListener(v -> loadData());
+        
+        binding.btnResetFilter.setOnClickListener(v -> {
+            currentFilters.reset();
+            refreshData();
         });
     }
 
-    private void loadRecentData() {
-        executorService.execute(() -> {
-            try {
-                Response<MetObjectsResponse> resp = RetrofitClient.getApiService()
-                        .searchWithFilters("art", true, true, 
-                                filterOptions.getDepartmentId(), 
-                                filterOptions.getDateBegin(), 
-                                filterOptions.getDateEnd(), 
-                                filterOptions.getGeoLocation())
-                        .execute();
-
-                if (!resp.isSuccessful() || resp.body() == null || resp.body().getObjectIDs() == null) {
-                    return;
-                }
-
-                List<Integer> allIds = resp.body().getObjectIDs();
-                Collections.shuffle(allIds);
-                List<Integer> selectedIds = allIds.subList(0, Math.min(10, allIds.size()));
-
-                List<MetArtwork> results = Collections.synchronizedList(new ArrayList<>());
-                CountDownLatch latch = new CountDownLatch(selectedIds.size());
-
-                for (int id : selectedIds) {
-                    executorService.execute(() -> {
-                        try {
-                            Response<MetArtwork> detail = RetrofitClient.getApiService()
-                                    .getObjectDetail(id)
-                                    .execute();
-                            if (detail.isSuccessful() && detail.body() != null && detail.body().getDisplayImage() != null) {
-                                results.add(detail.body());
-                            }
-                        } catch (Exception e) {
-                            Log.e("MUSE_HOME", "Detail error: " + e.getMessage());
-                        } finally {
-                            latch.countDown();
-                        }
-                    });
-                }
-
-                latch.await(15, TimeUnit.SECONDS);
-
-                mainHandler.post(() -> {
-                    if (!results.isEmpty()) {
-                        recentAdapter.setData(new ArrayList<>(results));
-                        binding.rvRecent.scrollToPosition(0);
-                    }
-                });
-
-            } catch (Exception e) {
-                Log.e("MUSE_HOME", "Recent error: " + e.getMessage());
-            }
-        });
+    private void setupSwipeRefresh() {
+        binding.swipeRefresh.setColorSchemeColors(getResources().getColor(R.color.muse_gold));
+        binding.swipeRefresh.setOnRefreshListener(this::refreshData);
     }
 
-    private void showLoading(boolean isLoading) {
-        binding.progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
-        if (isLoading) {
-            binding.rvFeatured.setVisibility(View.GONE);
-            binding.rvRecent.setVisibility(View.GONE);
-            binding.featuredHeader.setVisibility(View.GONE);
-            binding.recentHeader.setVisibility(View.GONE);
-            binding.layoutNetworkError.setVisibility(View.GONE);
-            binding.layoutEmptyFilter.setVisibility(View.GONE);
+    private void refreshData() {
+        cachedFeatured = null;
+        cachedRecent = null;
+        loadData();
+    }
+
+    public void onFilterChanged(FilterOptions filterOptions) {
+        this.currentFilters = filterOptions;
+        refreshData();
+    }
+
+    private void loadData() {
+        // Show loading state if not already refreshing via swipe
+        if (!binding.swipeRefresh.isRefreshing()) {
+            binding.progressBar.setVisibility(View.VISIBLE);
         }
-    }
-
-    private void showContent() {
-        binding.progressBar.setVisibility(View.GONE);
-        binding.rvFeatured.setVisibility(View.VISIBLE);
-        binding.rvRecent.setVisibility(View.VISIBLE);
-        binding.featuredHeader.setVisibility(View.VISIBLE);
-        binding.recentHeader.setVisibility(View.VISIBLE);
+        
         binding.layoutNetworkError.setVisibility(View.GONE);
         binding.layoutEmptyFilter.setVisibility(View.GONE);
-        binding.btnRefreshToolbar.clearAnimation();
+        
+        loadFeatured();
+        loadRecent(new Random().nextInt(50) + 1);
     }
 
-    private void showNetworkError() {
-        showLoading(false);
-        binding.layoutNetworkError.setVisibility(View.VISIBLE);
-        binding.btnRefreshToolbar.clearAnimation();
+    private void displayCachedData() {
+        if (cachedFeatured != null) {
+            binding.rvFeatured.setAdapter(new FeaturedArtworkAdapter(cachedFeatured));
+        }
+        if (cachedRecent != null) {
+            binding.rvRecent.setAdapter(new RecentArtworkAdapter(cachedRecent));
+        }
     }
 
-    private void showEmptyState() {
-        showLoading(false);
-        binding.layoutEmptyFilter.setVisibility(View.VISIBLE);
-        binding.btnRefreshToolbar.clearAnimation();
+    private void loadFeatured() {
+        String classification = currentFilters.getClassification() != null ? currentFilters.getClassification() : "Paintings";
+        
+        RetrofitClient.getClient().getFeaturedArtworks(
+                BuildConfig.HARVARD_API_KEY, 1, 0, classification, "totalpageviews", 20, FIELDS
+        ).enqueue(new Callback<HarvardListResponse>() {
+            @Override
+            public void onResponse(Call<HarvardListResponse> call, Response<HarvardListResponse> response) {
+                checkLoadingFinished();
+                if (response.isSuccessful() && response.body() != null) {
+                    List<HarvardArtwork> results = new ArrayList<>();
+                    for (HarvardArtwork art : response.body().getRecords()) {
+                        if (art.getDisplayImage() != null) {
+                            results.add(art);
+                            if (results.size() >= 10) break;
+                        }
+                    }
+                    cachedFeatured = results;
+                    binding.rvFeatured.setAdapter(new FeaturedArtworkAdapter(cachedFeatured));
+                    
+                    if (results.isEmpty()) {
+                        binding.layoutEmptyFilter.setVisibility(View.VISIBLE);
+                    }
+                }
+            }
+            @Override
+            public void onFailure(Call<HarvardListResponse> call, Throwable t) {
+                checkLoadingFinished();
+                binding.layoutNetworkError.setVisibility(View.VISIBLE);
+            }
+        });
     }
 
-    private void startRefreshAnimation() {
-        RotateAnimation rotate = new RotateAnimation(0, 360, 
-                Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
-        rotate.setDuration(1000);
-        rotate.setRepeatCount(Animation.INFINITE);
-        binding.btnRefreshToolbar.startAnimation(rotate);
+    private void loadRecent(int page) {
+        RetrofitClient.getClient().getRecentArtworks(
+                BuildConfig.HARVARD_API_KEY, 1, 0, 20, page, FIELDS
+        ).enqueue(new Callback<HarvardListResponse>() {
+            @Override
+            public void onResponse(Call<HarvardListResponse> call, Response<HarvardListResponse> response) {
+                checkLoadingFinished();
+                if (response.isSuccessful() && response.body() != null) {
+                    List<HarvardArtwork> results = new ArrayList<>();
+                    for (HarvardArtwork art : response.body().getRecords()) {
+                        if (art.getDisplayImage() != null) {
+                            results.add(art);
+                            if (results.size() >= 10) break;
+                        }
+                    }
+                    cachedRecent = results;
+                    binding.rvRecent.setAdapter(new RecentArtworkAdapter(cachedRecent));
+                }
+            }
+            @Override
+            public void onFailure(Call<HarvardListResponse> call, Throwable t) {
+                checkLoadingFinished();
+            }
+        });
+    }
+
+    private void checkLoadingFinished() {
+        binding.progressBar.setVisibility(View.GONE);
+        binding.swipeRefresh.setRefreshing(false);
     }
 
     @Override

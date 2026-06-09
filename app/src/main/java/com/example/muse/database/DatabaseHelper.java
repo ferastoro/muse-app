@@ -6,7 +6,8 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "muse_database.db";
-    private static final int DATABASE_VERSION = 3; // Incremented for image_url migration
+    // TINGKATKAN VERSI DATABASE UNTUK MEMICU onUpgrade DAN MENGHAPUS FAVORIT LAMA
+    private static final int DATABASE_VERSION = 4; 
     private static DatabaseHelper instance;
 
     private DatabaseHelper(Context context) {
@@ -37,6 +38,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        // Hapus tabel favorit yang sudah ada dan buat ulang untuk membersihkan data lama
         db.execSQL("DROP TABLE IF EXISTS favorites");
         onCreate(db);
     }

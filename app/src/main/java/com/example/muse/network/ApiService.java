@@ -1,8 +1,7 @@
 package com.example.muse.network;
 
-import com.example.muse.model.MetArtwork;
-import com.example.muse.model.MetObjectsResponse;
-
+import com.example.muse.model.HarvardArtwork;
+import com.example.muse.model.HarvardListResponse;
 import retrofit2.Call;
 import retrofit2.http.GET;
 import retrofit2.http.Path;
@@ -10,39 +9,65 @@ import retrofit2.http.Query;
 
 public interface ApiService {
 
-    // Highlight / Featured
-    @GET("search")
-    Call<MetObjectsResponse> getHighlightObjects(
-        @Query("isHighlight") boolean isHighlight,
-        @Query("hasImages") boolean hasImages,
-        @Query("isPublicDomain") boolean isPublicDomain,
-        @Query("q") String query
+    @GET("object")
+    Call<HarvardListResponse> getFeaturedArtworks(
+        @Query("apikey") String apiKey,
+        @Query("hasimage") int hasImage,
+        @Query("imagepermissionlevel") int permission,
+        @Query("classification") String classification,
+        @Query("sortby") String sortBy,
+        @Query("size") int size,
+        @Query("fields") String fields
     );
 
-    // Search umum
-    @GET("search")
-    Call<MetObjectsResponse> searchObjects(
-        @Query("q") String query,
-        @Query("hasImages") boolean hasImages,
-        @Query("isPublicDomain") boolean isPublicDomain,
-        @Query("departmentId") Integer departmentId
+    @GET("object")
+    Call<HarvardListResponse> getRecentArtworks(
+        @Query("apikey") String apiKey,
+        @Query("hasimage") int hasImage,
+        @Query("imagepermissionlevel") int permission,
+        @Query("size") int size,
+        @Query("page") int page,
+        @Query("fields") String fields
     );
 
-    // FIX 2: Search dengan filters lengkap
-    @GET("search")
-    Call<MetObjectsResponse> searchWithFilters(
-        @Query("q") String query,
-        @Query("hasImages") boolean hasImages,
-        @Query("isPublicDomain") boolean isPublicDomain,
-        @Query("departmentId") Integer departmentId,
-        @Query("dateBegin") Integer dateBegin,
-        @Query("dateEnd") Integer dateEnd,
-        @Query("geoLocation") String geoLocation
+    @GET("object")
+    Call<HarvardListResponse> searchArtworks(
+        @Query("apikey") String apiKey,
+        @Query("keyword") String keyword,
+        @Query("hasimage") int hasImage,
+        @Query("imagepermissionlevel") int permission,
+        @Query("size") int size,
+        @Query("fields") String fields
     );
 
-    // Detail satu karya
-    @GET("objects/{objectId}")
-    Call<MetArtwork> getObjectDetail(
-        @Path("objectId") int objectId
+    @GET("object")
+    Call<HarvardListResponse> searchWithFilters(
+        @Query("apikey") String apiKey,
+        @Query("keyword") String keyword,
+        @Query("hasimage") int hasImage,
+        @Query("imagepermissionlevel") int permission,
+        @Query("classification") String classification,
+        @Query("culture") String culture,
+        @Query("datebegin") Integer dateBegin,
+        @Query("dateend") Integer dateEnd,
+        @Query("century") String century,
+        @Query("size") int size,
+        @Query("fields") String fields
+    );
+
+    @GET("object/{id}")
+    Call<HarvardArtwork> getArtworkDetail(
+        @Path("id") int id,
+        @Query("apikey") String apiKey
+    );
+
+    @GET("object")
+    Call<HarvardListResponse> getRelatedArtworks(
+        @Query("apikey") String apiKey,
+        @Query("classification") String classification,
+        @Query("hasimage") int hasImage,
+        @Query("imagepermissionlevel") int permission,
+        @Query("size") int size,
+        @Query("fields") String fields
     );
 }

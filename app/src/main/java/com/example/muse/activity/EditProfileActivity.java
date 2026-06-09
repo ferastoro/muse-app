@@ -44,8 +44,9 @@ public class EditProfileActivity extends AppCompatActivity {
 
     private void loadExistingData() {
         SharedPreferences prefs = getSharedPreferences("muse_prefs", MODE_PRIVATE);
-        String name = prefs.getString("user_name", "Andi Budiman");
-        String email = prefs.getString("user_email", "andi@example.com");
+        // Fix: Use consistent defaults and keys
+        String name = prefs.getString("user_name", "Pengguna MUSE");
+        String email = prefs.getString("user_email", "muse@example.com");
         currentAvatarUri = prefs.getString("user_avatar", null);
 
         binding.etName.setText(name);
@@ -65,7 +66,6 @@ public class EditProfileActivity extends AppCompatActivity {
         if (requestCode == REQUEST_IMAGE && resultCode == RESULT_OK && data != null) {
             Uri selectedImage = data.getData();
             if (selectedImage != null) {
-                // Take persistable permission if possible or just use string
                 currentAvatarUri = selectedImage.toString();
                 Glide.with(this)
                         .load(selectedImage)

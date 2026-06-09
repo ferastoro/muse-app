@@ -6,6 +6,7 @@
 
     <!-- MUSE Design System - Gold / Primary -->
     <color name="muse_gold">#C9A84C</color>
+    <color name="muse_gold_translucent">#33C9A84C</color>
     <color name="muse_warm_brown">#8B7355</color>
 
     <!-- Light Theme -->

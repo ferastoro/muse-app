@@ -1,79 +1,70 @@
 package com.example.muse.adapter;
 
+import android.content.Intent;
+import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
-
+import android.widget.ImageView;
+import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.example.muse.R;
-import com.example.muse.databinding.ItemArtworkRecentBinding;
-import com.example.muse.model.MetArtwork;
-
-import java.util.ArrayList;
+import com.example.muse.activity.DetailActivity;
+import com.example.muse.model.HarvardArtwork;
 import java.util.List;
 
 public class RecentArtworkAdapter extends RecyclerView.Adapter<RecentArtworkAdapter.ViewHolder> {
+    private List<HarvardArtwork> artworks;
 
-    private List<MetArtwork> artworks = new ArrayList<>();
-    private OnItemClickListener listener;
-
-    public interface OnItemClickListener {
-        void onItemClick(MetArtwork artwork);
-    }
-
-    public void setOnItemClickListener(OnItemClickListener listener) {
-        this.listener = listener;
-    }
-
-    public void setData(List<MetArtwork> artworks) {
+    public RecentArtworkAdapter(List<HarvardArtwork> artworks) {
         this.artworks = artworks;
-        notifyDataSetChanged();
     }
 
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        ItemArtworkRecentBinding binding = ItemArtworkRecentBinding.inflate(
-                LayoutInflater.from(parent.getContext()), parent, false);
-        return new ViewHolder(binding);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_artwork_recent, parent, false);
+        return new ViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        MetArtwork artwork = artworks.get(position);
-        holder.binding.tvTitle.setText(artwork.getTitle());
-        holder.binding.tvArtist.setText(artwork.getArtistDisplayName());
-        holder.binding.tvYear.setText(artwork.getObjectDate());
-        holder.binding.tvDescription.setText(artwork.getDescription());
+        HarvardArtwork artwork = artworks.get(position);
+        holder.title.setText(artwork.getTitle());
+        holder.artist.setText(artwork.getArtistName());
+        holder.year.setText(artwork.getDated());
 
-        Glide.with(holder.itemView.getContext())
+        Glide.with(holder.image.getContext())
                 .load(artwork.getDisplayImage())
                 .diskCacheStrategy(DiskCacheStrategy.ALL)
                 .placeholder(R.drawable.ic_placeholder)
                 .error(R.drawable.ic_placeholder)
-                .into(holder.binding.ivArtwork);
+                .into(holder.image);
 
+        // MUSE_STAT: Kirim ID ke DetailActivity
         holder.itemView.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onItemClick(artwork);
-            }
+            Log.d("MUSE_STAT", "RecentAdapter: Clicking ID " + artwork.getId());
+            Intent intent = new Intent(v.getContext(), DetailActivity.class);
+            intent.putExtra("artwork_id", artwork.getId());
+            v.getContext().startActivity(intent);
         });
     }
 
     @Override
-    public int getItemCount() {
-        return artworks.size();
-    }
+    public int getItemCount() { return artworks.size(); }
 
-    static class ViewHolder extends RecyclerView.ViewHolder {
-        ItemArtworkRecentBinding binding;
-
-        ViewHolder(ItemArtworkRecentBinding binding) {
-            super(binding.getRoot());
-            this.binding = binding;
+    public static class ViewHolder extends RecyclerView.ViewHolder {
+        ImageView image;
+        TextView title, artist, year;
+        public ViewHolder(View itemView) {
+            super(itemView);
+            image = itemView.findViewById(R.id.ivArtwork);
+            title = itemView.findViewById(R.id.tvTitle);
+            artist = itemView.findViewById(R.id.tvArtist);
+            year = itemView.findViewById(R.id.tvYear);
         }
     }
 }

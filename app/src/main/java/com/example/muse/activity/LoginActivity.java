@@ -23,10 +23,12 @@ public class LoginActivity extends AppCompatActivity {
                 return;
             }
 
+            // Fix: Use consistent keys "user_name" and "user_email"
             SharedPreferences prefs = getSharedPreferences("muse_prefs", MODE_PRIVATE);
             prefs.edit()
                     .putBoolean("isLoggedIn", true)
-                    .putString("userName", name)
+                    .putString("user_name", name)
+                    .putString("user_email", name.toLowerCase().replace(" ", "") + "@example.com")
                     .apply();
 
             Intent intent = new Intent(LoginActivity.this, HomeActivity.class);

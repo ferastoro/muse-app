@@ -8,7 +8,11 @@ import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 
+import com.bumptech.glide.Glide;
 import com.example.muse.databinding.ActivityMainBinding;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -20,6 +24,9 @@ public class MainActivity extends AppCompatActivity {
         applyTheme();
         
         super.onCreate(savedInstanceState);
+
+        // FIX 4: Bersihkan data lama Shared Preferences dan Glide cache
+        clearLegacyData();
 
         // Session Check
         SharedPreferences prefs = getSharedPreferences("muse_prefs", MODE_PRIVATE);
@@ -39,9 +46,6 @@ public class MainActivity extends AppCompatActivity {
         binding.btnMulai.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, LoginActivity.class);
             startActivity(intent);
-            // We don't finish() here so user can go back from Login if they want, 
-            // but usually splash -> login finishes splash. 
-            // Following requirement: "Login only happens if user really logs in".
         });
     }
 
@@ -68,6 +72,29 @@ public class MainActivity extends AppCompatActivity {
             binding.imgBg.setAlpha(0.10f);
         } else {
             binding.imgBg.setAlpha(0.15f);
+        }
+    }
+
+    private void clearLegacyData() {
+        SharedPreferences prefs = getSharedPreferences("muse_prefs", MODE_PRIVATE);
+        
+        // Cek apakah sudah pernah di-clear setelah migrasi Harvard
+        boolean migrated = prefs.getBoolean("harvard_migrated", false);
+
+        if (!migrated) {
+            // FIX 4: Clear Glide cache di background
+            ExecutorService executor = Executors.newSingleThreadExecutor();
+            executor.execute(() -> {
+                Glide.get(this).clearDiskCache();
+            });
+
+            prefs.edit()
+                // Clear stat lama
+                .remove("stat_viewed_ids")
+                .remove("stat_visit_count")
+                // Tandai sudah migrasi
+                .putBoolean("harvard_migrated", true)
+                .apply();
         }
     }
 }

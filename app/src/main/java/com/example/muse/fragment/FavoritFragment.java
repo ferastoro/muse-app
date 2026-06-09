@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -25,6 +26,7 @@ import com.example.muse.model.Favorite;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class FavoritFragment extends Fragment {
 
@@ -32,8 +34,9 @@ public class FavoritFragment extends Fragment {
     private FavoriteAdapter adapter;
     private DatabaseHelper dbHelper;
     private FavoriteDao favoriteDao;
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
-    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final AtomicBoolean isActive = new AtomicBoolean(false);
+    private ExecutorService executor;
+    private Handler mainHandler;
 
     @Nullable
     @Override
@@ -45,6 +48,10 @@ public class FavoritFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        isActive.set(true);
+        executor = Executors.newFixedThreadPool(3);
+        mainHandler = new Handler(Looper.getMainLooper());
 
         dbHelper = DatabaseHelper.getInstance(requireContext());
         favoriteDao = new FavoriteDao(dbHelper);
@@ -79,9 +86,11 @@ public class FavoritFragment extends Fragment {
 
             @Override
             public void onHeartClick(Favorite favorite) {
-                executorService.execute(() -> {
+                executor.execute(() -> {
+                    if (!isActive.get()) return;
                     favoriteDao.deleteFavorite(favorite.getId());
-                    mainHandler.post(() -> loadFavorites());
+                    if (!isActive.get()) return;
+                    postToUi(FavoritFragment.this::loadFavorites);
                 });
             }
         });
@@ -92,10 +101,27 @@ public class FavoritFragment extends Fragment {
             Navigation.findNavController(v).navigate(R.id.navigation_home));
     }
 
+    private void postToUi(Runnable action) {
+        if (mainHandler == null) return;
+        mainHandler.post(() -> {
+            // Triple check sebelum akses UI
+            if (!isActive.get()) return;
+            if (getView() == null) return;
+            if (binding == null) return;
+            try {
+                action.run();
+            } catch (Exception e) {
+                Log.e("MUSE_UI", "UI update skipped: " + e.getMessage());
+            }
+        });
+    }
+
     private void loadFavorites() {
-        executorService.execute(() -> {
+        executor.execute(() -> {
+            if (!isActive.get()) return;
             List<Favorite> favorites = favoriteDao.getAllFavorites();
-            mainHandler.post(() -> updateUI(favorites));
+            if (!isActive.get()) return;
+            postToUi(() -> updateUI(favorites));
         });
     }
 
@@ -115,6 +141,13 @@ public class FavoritFragment extends Fragment {
 
     @Override
     public void onDestroyView() {
+        isActive.set(false);
+        if (executor != null && !executor.isShutdown()) {
+            executor.shutdownNow();
+        }
+        if (mainHandler != null) {
+            mainHandler.removeCallbacksAndMessages(null);
+        }
         super.onDestroyView();
         binding = null;
     }

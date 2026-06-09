@@ -1,17 +1,14 @@
 package com.example.muse.activity;
 
 import android.os.Bundle;
-import android.widget.ArrayAdapter;
+import android.view.MenuItem;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GravityCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.NavController;
-import androidx.navigation.Navigation;
 import androidx.navigation.fragment.NavHostFragment;
-import androidx.navigation.ui.NavigationUI;
 import com.example.muse.R;
 import com.example.muse.databinding.ActivityHomeBinding;
-import com.example.muse.databinding.LayoutFilterSidebarBinding;
 import com.example.muse.fragment.HomeFragment;
 import com.example.muse.fragment.SearchFragment;
 import com.example.muse.model.FilterOptions;
@@ -21,8 +18,7 @@ import java.util.List;
 public class HomeActivity extends AppCompatActivity {
 
     private ActivityHomeBinding binding;
-    private LayoutFilterSidebarBinding filterBinding;
-    private FilterOptions filterOptions = new FilterOptions();
+    private final FilterOptions filterOptions = new FilterOptions();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,26 +26,21 @@ public class HomeActivity extends AppCompatActivity {
         binding = ActivityHomeBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        // Fix: Use the automatically generated binding for the included layout
-        filterBinding = binding.layoutFilter;
-
         setupNavigationFix();
-        setupFilterSpinners();
-        setupFilterActions();
+        setupSidebar();
     }
 
     private void setupNavigationFix() {
         NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.nav_host_fragment);
+
         if (navHostFragment != null) {
             NavController navController = navHostFragment.getNavController();
-            
+
             binding.bottomNavigation.setOnItemSelectedListener(item -> {
                 int id = item.getItemId();
-                
-                // Pop backstack to start destination to avoid redundant state
                 navController.popBackStack(navController.getGraph().getStartDestinationId(), false);
-                
+
                 if (id == R.id.navigation_home) {
                     navController.navigate(R.id.navigation_home);
                 } else if (id == R.id.navigation_search) {
@@ -64,81 +55,75 @@ public class HomeActivity extends AppCompatActivity {
         }
     }
 
-    private void setupFilterSpinners() {
-        String[] eras = {"Semua Era", "Prasejarah", "Kuno (500 SM-500 M)", "Abad Pertengahan", "Renaissance", "Baroque & Klasik", "Abad 19", "Abad 20", "Kontemporer"};
-        String[] locations = {"Semua Wilayah", "Eropa", "Amerika", "Asia", "Afrika", "Timur Tengah", "Mesir Kuno"};
-        String[] types = {"Semua Tipe", "Lukisan", "Patung", "Fotografi", "Seni Dekoratif", "Senjata & Armor", "Manuskrip"};
-
-        filterBinding.spinnerEra.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, eras));
-        filterBinding.spinnerLocation.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, locations));
-        filterBinding.spinnerType.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, types));
-    }
-
-    private void setupFilterActions() {
-        filterBinding.btnApplyFilter.setOnClickListener(v -> {
-            applyFilters();
-            binding.drawerLayout.closeDrawer(GravityCompat.START);
+    private void setupSidebar() {
+        binding.navigationView.setNavigationItemSelectedListener(item -> {
+            handleFilterSelection(item);
+            return false; // Keep drawer open for multi-selection
         });
 
-        filterBinding.btnResetFilterSidebar.setOnClickListener(v -> {
-            filterBinding.spinnerEra.setSelection(0);
-            filterBinding.spinnerLocation.setSelection(0);
-            filterBinding.spinnerType.setSelection(0);
-            filterOptions.reset();
-            notifyFilterChanged();
-            binding.drawerLayout.closeDrawer(GravityCompat.START);
-        });
+        binding.btnResetFilterSidebar.setOnClickListener(v -> resetFilters());
     }
 
-    private void applyFilters() {
-        // Map Era
-        String era = (String) filterBinding.spinnerEra.getSelectedItem();
-        filterOptions.setEraLabel(era);
-        if (era.equals("Prasejarah")) { filterOptions.setDateBegin(-3000); filterOptions.setDateEnd(-500); }
-        else if (era.equals("Kuno (500 SM-500 M)")) { filterOptions.setDateBegin(-500); filterOptions.setDateEnd(500); }
-        else if (era.equals("Abad Pertengahan")) { filterOptions.setDateBegin(500); filterOptions.setDateEnd(1400); }
-        else if (era.equals("Renaissance")) { filterOptions.setDateBegin(1400); filterOptions.setDateEnd(1600); }
-        else if (era.equals("Baroque & Klasik")) { filterOptions.setDateBegin(1600); filterOptions.setDateEnd(1800); }
-        else if (era.equals("Abad 19")) { filterOptions.setDateBegin(1800); filterOptions.setDateEnd(1900); }
-        else if (era.equals("Abad 20")) { filterOptions.setDateBegin(1900); filterOptions.setDateEnd(2000); }
-        else if (era.equals("Kontemporer")) { filterOptions.setDateBegin(2000); filterOptions.setDateEnd(2024); }
-        else { filterOptions.setDateBegin(null); filterOptions.setDateEnd(null); }
+    private void handleFilterSelection(MenuItem item) {
+        int id = item.getItemId();
+        item.setChecked(!item.isChecked()); // Toggle checked state
 
-        // Map Location
-        String loc = (String) filterBinding.spinnerLocation.getSelectedItem();
-        filterOptions.setLocationLabel(loc);
-        if (loc.equals("Eropa")) filterOptions.setGeoLocation("Europe");
-        else if (loc.equals("Amerika")) filterOptions.setGeoLocation("Americas");
-        else if (loc.equals("Asia")) filterOptions.setGeoLocation("Asia");
-        else if (loc.equals("Afrika")) filterOptions.setGeoLocation("Africa");
-        else if (loc.equals("Timur Tengah")) filterOptions.setGeoLocation("Middle East");
-        else if (loc.equals("Mesir Kuno")) filterOptions.setGeoLocation("Egypt");
-        else filterOptions.setGeoLocation(null);
+        // ERA / PERIODE
+        if (id == R.id.era_ancient) {
+            filterOptions.toggleEra("Ancient", null, null, "Ancient");
+        } else if (id == R.id.era_renaissance) {
+            filterOptions.toggleEra("Renaissance", 1400, 1600, null);
+        } else if (id == R.id.era_modern) {
+            filterOptions.toggleEra("Modern", 1850, 2025, null);
+        }
 
-        // Map Type
-        String type = (String) filterBinding.spinnerType.getSelectedItem();
-        filterOptions.setTypeLabel(type);
-        if (type.equals("Lukisan")) filterOptions.setDepartmentId(11);
-        else if (type.equals("Patung")) filterOptions.setDepartmentId(13);
-        else if (type.equals("Fotografi")) filterOptions.setDepartmentId(19);
-        else if (type.equals("Seni Dekoratif")) filterOptions.setDepartmentId(6);
-        else if (type.equals("Senjata & Armor")) filterOptions.setDepartmentId(4);
-        else if (type.equals("Manuskrip")) filterOptions.setDepartmentId(8);
-        else filterOptions.setDepartmentId(null);
+        // WILAYAH
+        else if (id == R.id.loc_europe) {
+            filterOptions.toggleCulture("French|Dutch|Italian|German|British");
+        } else if (id == R.id.loc_asia) {
+            filterOptions.toggleCulture("Chinese|Japanese|Indian");
+        } else if (id == R.id.loc_america) {
+            filterOptions.toggleCulture("American");
+        }
+
+        // TIPE KARYA
+        else if (id == R.id.type_painting) {
+            filterOptions.toggleClassification("Paintings");
+        } else if (id == R.id.type_sculpture) {
+            filterOptions.toggleClassification("Sculpture");
+        }
 
         notifyFilterChanged();
+    }
+
+    private void resetFilters() {
+        filterOptions.reset();
+
+        // Clear all check marks in the menu
+        int[] menuIds = {
+            R.id.era_ancient, R.id.era_renaissance, R.id.era_modern,
+            R.id.loc_europe, R.id.loc_asia, R.id.loc_america,
+            R.id.type_painting, R.id.type_sculpture
+        };
+
+        for (int id : menuIds) {
+            MenuItem item = binding.navigationView.getMenu().findItem(id);
+            if (item != null) item.setChecked(false);
+        }
+
+        notifyFilterChanged();
+        closeDrawer();
     }
 
     private void notifyFilterChanged() {
         NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment);
         if (navHostFragment != null) {
             List<Fragment> fragments = navHostFragment.getChildFragmentManager().getFragments();
-            if (!fragments.isEmpty()) {
-                Fragment currentFragment = fragments.get(0);
-                if (currentFragment instanceof HomeFragment) {
-                    ((HomeFragment) currentFragment).onFilterChanged(filterOptions);
-                } else if (currentFragment instanceof SearchFragment) {
-                    ((SearchFragment) currentFragment).onFilterChanged(filterOptions);
+            for (Fragment fragment : fragments) {
+                if (fragment instanceof HomeFragment) {
+                    ((HomeFragment) fragment).onFilterChanged(filterOptions);
+                } else if (fragment instanceof SearchFragment) {
+                    ((SearchFragment) fragment).onFilterChanged(filterOptions);
                 }
             }
         }
@@ -146,6 +131,10 @@ public class HomeActivity extends AppCompatActivity {
 
     public void openDrawer() {
         binding.drawerLayout.openDrawer(GravityCompat.START);
+    }
+
+    public void closeDrawer() {
+        binding.drawerLayout.closeDrawer(GravityCompat.START);
     }
 
     @Override

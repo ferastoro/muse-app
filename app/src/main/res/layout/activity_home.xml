@@ -10,23 +10,22 @@
     <!-- Konten utama -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="?attr/colorSurface">
+        android:layout_height="match_parent">
 
         <androidx.fragment.app.FragmentContainerView
             android:id="@+id/nav_host_fragment"
             android:name="androidx.navigation.fragment.NavHostFragment"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginBottom="?attr/actionBarSize"
+            android:layout_height="0dp"
             app:defaultNavHost="true"
-            app:navGraph="@navigation/nav_graph" />
+            app:navGraph="@navigation/nav_graph"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/bottom_navigation" />
 
         <com.google.android.material.bottomnavigation.BottomNavigationView
             android:id="@+id/bottom_navigation"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom"
             android:background="?attr/colorSurface"
             app:itemIconTint="@color/muse_gold"
             app:itemTextColor="@color/muse_gold"
@@ -35,18 +34,40 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- Sidebar Filter -->
-    <com.google.android.material.navigation.NavigationView
-        android:id="@+id/nav_view_filter"
+    <!-- Sidebar Wrapper -->
+    <LinearLayout
         android:layout_width="300dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:background="?attr/colorSurface">
+        android:orientation="vertical"
+        android:background="?attr/colorSurface"
+        android:clickable="true"
+        android:focusable="true">
 
-        <include
-            android:id="@+id/layout_filter"
-            layout="@layout/layout_filter_sidebar" />
+        <com.google.android.material.navigation.NavigationView
+            android:id="@+id/navigationView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="?attr/colorSurface"
+            app:headerLayout="@layout/nav_header"
+            app:itemIconTint="@color/nav_item_color"
+            app:itemTextColor="@color/nav_item_color"
+            app:itemBackground="@drawable/nav_item_background"
+            app:itemShapeAppearanceOverlay="@style/RoundedSquare"
+            app:itemHorizontalPadding="16dp"
+            app:menu="@menu/sidebar_menu" />
 
-    </com.google.android.material.navigation.NavigationView>
+        <!-- Fixed Reset Button at the bottom -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnResetFilterSidebar"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            android:text="Reset Semua Filter"
+            android:textColor="@color/muse_gold"
+            app:strokeColor="@color/muse_gold" />
+    </LinearLayout>
 
 </androidx.drawerlayout.widget.DrawerLayout>

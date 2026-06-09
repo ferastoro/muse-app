@@ -25,6 +25,8 @@ import com.example.muse.database.DatabaseHelper;
 import com.example.muse.database.FavoriteDao;
 import com.example.muse.databinding.FragmentUserBinding;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -35,7 +37,6 @@ public class UserFragment extends Fragment {
     private DatabaseHelper dbHelper;
     private FavoriteDao favoriteDao;
     
-    // Fix 9: Crash prevention pattern
     private ExecutorService executor;
     private Handler handler;
     private boolean isFragmentActive = false;
@@ -58,20 +59,18 @@ public class UserFragment extends Fragment {
 
         setupThemeSwitch();
         setupClickListeners();
-        setupStaticStats();
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        // Fix 10: Load data in onResume to catch updates from EditProfileActivity
         loadUserData();
-        updateFavoriteStat();
+        loadStats();
     }
 
     private void loadUserData() {
-        String name = sharedPreferences.getString("user_name", "Andi Budiman");
-        String email = sharedPreferences.getString("user_email", "andi@example.com");
+        String name = sharedPreferences.getString("user_name", "Pengguna MUSE");
+        String email = sharedPreferences.getString("user_email", "muse@example.com");
         String avatarUri = sharedPreferences.getString("user_avatar", null);
 
         binding.tvName.setText(name);
@@ -86,6 +85,30 @@ public class UserFragment extends Fragment {
         } else {
             binding.ivAvatar.setImageResource(R.drawable.ic_avatar_placeholder);
         }
+    }
+
+    private void loadStats() {
+        // 1. Koleksi & Kunjungan dari SharedPreferences
+        Set<String> viewedIds = sharedPreferences.getStringSet("stat_viewed_ids", new HashSet<>());
+        int koleksiCount = viewedIds.size();
+        int kunjunganCount = sharedPreferences.getInt("stat_visit_count", 0);
+
+        // 2. Favorit dari Database (Background Thread)
+        if (dbHelper == null) {
+            dbHelper = DatabaseHelper.getInstance(requireContext());
+            favoriteDao = new FavoriteDao(dbHelper);
+        }
+
+        executor.execute(() -> {
+            int favCount = favoriteDao.getFavoritesCount();
+            handler.post(() -> {
+                if (!isFragmentActive || binding == null) return;
+                
+                binding.tvStatKoleksi.setText(String.valueOf(koleksiCount));
+                binding.tvStatFavorit.setText(String.valueOf(favCount));
+                binding.tvStatKunjungan.setText(String.valueOf(kunjunganCount));
+            });
+        });
     }
 
     private void setupThemeSwitch() {
@@ -106,33 +129,11 @@ public class UserFragment extends Fragment {
     }
 
     private void setupClickListeners() {
-        // Fix 10: Open EditProfileActivity
         binding.btnEditProfile.setOnClickListener(v -> {
             startActivity(new Intent(getActivity(), EditProfileActivity.class));
         });
 
         binding.itemLogout.setOnClickListener(v -> showLogoutDialog());
-    }
-
-    private void setupStaticStats() {
-        binding.tvStatKoleksi.setText("124");
-        binding.tvStatKunjungan.setText("42");
-    }
-
-    private void updateFavoriteStat() {
-        if (dbHelper == null) {
-            dbHelper = DatabaseHelper.getInstance(requireContext());
-            favoriteDao = new FavoriteDao(dbHelper);
-        }
-
-        executor.execute(() -> {
-            int count = favoriteDao.getFavoritesCount();
-            handler.post(() -> {
-                // Fix 9: Check fragment state
-                if (!isFragmentActive || binding == null) return;
-                binding.tvStatFavorit.setText(String.valueOf(count));
-            });
-        });
     }
 
     private void showLogoutDialog() {
@@ -143,7 +144,6 @@ public class UserFragment extends Fragment {
                 .setPositiveButton(R.string.setting_logout, (dialog, which) -> {
                     sharedPreferences.edit()
                             .putBoolean("isLoggedIn", false)
-                            .remove("userName") // From previous logic
                             .remove("user_name")
                             .remove("user_email")
                             .remove("user_avatar")
