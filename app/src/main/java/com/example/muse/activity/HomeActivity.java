@@ -69,8 +69,8 @@ public class HomeActivity extends AppCompatActivity {
         item.setChecked(!item.isChecked()); // Toggle checked state
 
         // ERA / PERIODE
-        if (id == R.id.era_ancient) {
-            filterOptions.toggleEra("Ancient", null, null, "Ancient");
+        if (id == R.id.era_baroque) {
+            filterOptions.toggleEra("Baroque", 1600, 1750, null);
         } else if (id == R.id.era_renaissance) {
             filterOptions.toggleEra("Renaissance", 1400, 1600, null);
         } else if (id == R.id.era_modern) {
@@ -79,9 +79,9 @@ public class HomeActivity extends AppCompatActivity {
 
         // WILAYAH
         else if (id == R.id.loc_europe) {
-            filterOptions.toggleCulture("French|Dutch|Italian|German|British");
+            filterOptions.toggleCulture("French|Dutch|Italian|German|British|Spanish");
         } else if (id == R.id.loc_asia) {
-            filterOptions.toggleCulture("Chinese|Japanese|Indian");
+            filterOptions.toggleCulture("Chinese|Japanese|Indian|Korean|Vietnamese");
         } else if (id == R.id.loc_america) {
             filterOptions.toggleCulture("American");
         }
@@ -101,7 +101,7 @@ public class HomeActivity extends AppCompatActivity {
 
         // Clear all check marks in the menu
         int[] menuIds = {
-            R.id.era_ancient, R.id.era_renaissance, R.id.era_modern,
+            R.id.era_baroque, R.id.era_renaissance, R.id.era_modern,
             R.id.loc_europe, R.id.loc_asia, R.id.loc_america,
             R.id.type_painting, R.id.type_sculpture
         };

@@ -34,6 +34,7 @@ public class HomeFragment extends Fragment {
     private static List<HarvardArtwork> cachedFeatured = null;
     private static List<HarvardArtwork> cachedRecent = null;
     private FilterOptions currentFilters = new FilterOptions();
+    private int pendingCalls = 0;
     
     private final String FIELDS = "id,title,primaryimageurl,people,dated,medium,culture,classification,description,imagepermissionlevel";
 
@@ -84,7 +85,6 @@ public class HomeFragment extends Fragment {
             }
         });
 
-        // Retry and Reset buttons (Direct access via binding as they are inline in fragment_home.xml)
         binding.btnRetryNetwork.setOnClickListener(v -> loadData());
         
         binding.btnResetFilter.setOnClickListener(v -> {
@@ -110,7 +110,6 @@ public class HomeFragment extends Fragment {
     }
 
     private void loadData() {
-        // Show loading state if not already refreshing via swipe
         if (!binding.swipeRefresh.isRefreshing()) {
             binding.progressBar.setVisibility(View.VISIBLE);
         }
@@ -118,12 +117,41 @@ public class HomeFragment extends Fragment {
         binding.layoutNetworkError.setVisibility(View.GONE);
         binding.layoutEmptyFilter.setVisibility(View.GONE);
         
-        loadFeatured();
-        loadRecent(new Random().nextInt(50) + 1);
+        if (currentFilters.hasFilters()) {
+            // Filter mode: Hide top section, show only 1 list
+            binding.featuredHeader.setVisibility(View.GONE);
+            binding.rvFeatured.setVisibility(View.GONE);
+            binding.recentHeader.setText("Hasil Filter");
+            binding.recentHeader.setVisibility(View.VISIBLE);
+            
+            pendingCalls = 1;
+            loadFilteredData();
+        } else {
+            // Normal mode: Show everything
+            binding.featuredHeader.setVisibility(View.VISIBLE);
+            binding.rvFeatured.setVisibility(View.VISIBLE);
+            binding.recentHeader.setText("Koleksi Terbaru");
+            binding.recentHeader.setVisibility(View.VISIBLE);
+            
+            pendingCalls = 2;
+            loadFeatured();
+            // Using a smaller random range (1-20) to ensure we always get data on start
+            loadRecent(new Random().nextInt(20) + 1);
+        }
     }
 
     private void displayCachedData() {
-        if (cachedFeatured != null) {
+        if (currentFilters.hasFilters()) {
+            binding.featuredHeader.setVisibility(View.GONE);
+            binding.rvFeatured.setVisibility(View.GONE);
+            binding.recentHeader.setText("Hasil Filter");
+        } else {
+            binding.featuredHeader.setVisibility(View.VISIBLE);
+            binding.rvFeatured.setVisibility(View.VISIBLE);
+            binding.recentHeader.setText("Koleksi Terbaru");
+        }
+
+        if (!currentFilters.hasFilters() && cachedFeatured != null) {
             binding.rvFeatured.setAdapter(new FeaturedArtworkAdapter(cachedFeatured));
         }
         if (cachedRecent != null) {
@@ -132,14 +160,13 @@ public class HomeFragment extends Fragment {
     }
 
     private void loadFeatured() {
-        String classification = currentFilters.getClassification() != null ? currentFilters.getClassification() : "Paintings";
+        String classification = "Paintings";
         
         RetrofitClient.getClient().getFeaturedArtworks(
                 BuildConfig.HARVARD_API_KEY, 1, 0, classification, "totalpageviews", 20, FIELDS
         ).enqueue(new Callback<HarvardListResponse>() {
             @Override
             public void onResponse(Call<HarvardListResponse> call, Response<HarvardListResponse> response) {
-                checkLoadingFinished();
                 if (response.isSuccessful() && response.body() != null) {
                     List<HarvardArtwork> results = new ArrayList<>();
                     for (HarvardArtwork art : response.body().getRecords()) {
@@ -149,17 +176,16 @@ public class HomeFragment extends Fragment {
                         }
                     }
                     cachedFeatured = results;
-                    binding.rvFeatured.setAdapter(new FeaturedArtworkAdapter(cachedFeatured));
-                    
-                    if (results.isEmpty()) {
-                        binding.layoutEmptyFilter.setVisibility(View.VISIBLE);
+                    if (!currentFilters.hasFilters()) {
+                        binding.rvFeatured.setAdapter(new FeaturedArtworkAdapter(cachedFeatured));
                     }
                 }
+                checkLoadingFinished();
             }
             @Override
             public void onFailure(Call<HarvardListResponse> call, Throwable t) {
-                checkLoadingFinished();
                 binding.layoutNetworkError.setVisibility(View.VISIBLE);
+                checkLoadingFinished();
             }
         });
     }
@@ -170,7 +196,6 @@ public class HomeFragment extends Fragment {
         ).enqueue(new Callback<HarvardListResponse>() {
             @Override
             public void onResponse(Call<HarvardListResponse> call, Response<HarvardListResponse> response) {
-                checkLoadingFinished();
                 if (response.isSuccessful() && response.body() != null) {
                     List<HarvardArtwork> results = new ArrayList<>();
                     for (HarvardArtwork art : response.body().getRecords()) {
@@ -181,7 +206,14 @@ public class HomeFragment extends Fragment {
                     }
                     cachedRecent = results;
                     binding.rvRecent.setAdapter(new RecentArtworkAdapter(cachedRecent));
+                    
+                    // If start screen is empty, try page 1
+                    if (results.isEmpty() && page > 1) {
+                        loadRecent(1);
+                        return;
+                    }
                 }
+                checkLoadingFinished();
             }
             @Override
             public void onFailure(Call<HarvardListResponse> call, Throwable t) {
@@ -190,9 +222,52 @@ public class HomeFragment extends Fragment {
         });
     }
 
+    private void loadFilteredData() {
+        RetrofitClient.getClient().searchWithFilters(
+                BuildConfig.HARVARD_API_KEY, null, 1, 0,
+                currentFilters.getClassification(),
+                currentFilters.getCulture(),
+                currentFilters.getDateBegin(),
+                currentFilters.getDateEnd(),
+                currentFilters.getCentury(),
+                40, FIELDS
+        ).enqueue(new Callback<HarvardListResponse>() {
+            @Override
+            public void onResponse(Call<HarvardListResponse> call, Response<HarvardListResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    List<HarvardArtwork> results = new ArrayList<>();
+                    for (HarvardArtwork art : response.body().getRecords()) {
+                        if (art.getDisplayImage() != null) {
+                            results.add(art);
+                        }
+                    }
+                    cachedRecent = results;
+                    binding.rvRecent.setAdapter(new RecentArtworkAdapter(cachedRecent));
+                    
+                    if (results.isEmpty()) {
+                        binding.layoutEmptyFilter.setVisibility(View.VISIBLE);
+                        binding.recentHeader.setVisibility(View.GONE);
+                    } else {
+                        binding.recentHeader.setVisibility(View.VISIBLE);
+                    }
+                }
+                checkLoadingFinished();
+            }
+
+            @Override
+            public void onFailure(Call<HarvardListResponse> call, Throwable t) {
+                binding.layoutNetworkError.setVisibility(View.VISIBLE);
+                checkLoadingFinished();
+            }
+        });
+    }
+
     private void checkLoadingFinished() {
-        binding.progressBar.setVisibility(View.GONE);
-        binding.swipeRefresh.setRefreshing(false);
+        pendingCalls--;
+        if (pendingCalls <= 0) {
+            binding.progressBar.setVisibility(View.GONE);
+            binding.swipeRefresh.setRefreshing(false);
+        }
     }
 
     @Override

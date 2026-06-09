@@ -28,6 +28,7 @@ import retrofit2.Response;
 public class SearchFragment extends Fragment {
     private FragmentSearchBinding binding;
     private final String FIELDS = "id,title,primaryimageurl,people,dated,medium,culture,classification,imagepermissionlevel";
+    private FilterOptions currentFilters = new FilterOptions();
 
     @Nullable
     @Override
@@ -54,7 +55,7 @@ public class SearchFragment extends Fragment {
             @Override
             public boolean onQueryTextSubmit(String query) {
                 if (!query.trim().isEmpty()) {
-                    performSearch(query);
+                    performSearch(query.trim());
                 }
                 return true;
             }
@@ -73,37 +74,67 @@ public class SearchFragment extends Fragment {
         });
         
         binding.btnResetFilter.setOnClickListener(v -> {
-            // Logic to reset filters if implemented
-            String query = binding.searchView.getQuery().toString();
-            if (!query.isEmpty()) performSearch(query);
+            binding.searchView.setQuery("", false);
+            binding.rvSearchResults.setVisibility(View.GONE);
+            binding.resultsHeader.setVisibility(View.GONE);
+            binding.layoutEmptyFilter.setVisibility(View.GONE);
+            currentFilters.reset();
         });
     }
 
+    // This method is required by HomeActivity to update search results when filters change
     public void onFilterChanged(FilterOptions filterOptions) {
+        this.currentFilters = filterOptions;
         String query = binding.searchView.getQuery().toString();
+        // Only trigger search if there is a query, to avoid empty results on page load
         if (!query.isEmpty()) {
             performSearch(query);
         }
     }
 
     private void performSearch(String query) {
+        if (binding == null) return;
+        
         binding.progressBar.setVisibility(View.VISIBLE);
         binding.rvSearchResults.setVisibility(View.GONE);
         binding.resultsHeader.setVisibility(View.GONE);
         binding.layoutEmptyFilter.setVisibility(View.GONE);
         binding.layoutNetworkError.setVisibility(View.GONE);
 
-        RetrofitClient.getClient().searchArtworks(
-                BuildConfig.HARVARD_API_KEY, query, 1, 0, 30, FIELDS
-        ).enqueue(new Callback<HarvardListResponse>() {
+        Call<HarvardListResponse> call;
+        // When filters are active, use the filtered search endpoint
+        if (currentFilters.hasFilters()) {
+            call = RetrofitClient.getClient().searchWithFilters(
+                    BuildConfig.HARVARD_API_KEY, query, 1, null,
+                    currentFilters.getClassification(),
+                    currentFilters.getCulture(),
+                    currentFilters.getDateBegin(),
+                    currentFilters.getDateEnd(),
+                    currentFilters.getCentury(),
+                    50, FIELDS
+            );
+        } else {
+            // Otherwise use the general search
+            call = RetrofitClient.getClient().searchArtworks(
+                    BuildConfig.HARVARD_API_KEY, query, 1, null, 50, FIELDS
+            );
+        }
+
+        call.enqueue(new Callback<HarvardListResponse>() {
             @Override
             public void onResponse(Call<HarvardListResponse> call, Response<HarvardListResponse> response) {
+                if (binding == null) return;
                 binding.progressBar.setVisibility(View.GONE);
+                
                 if (response.isSuccessful() && response.body() != null) {
+                    List<HarvardArtwork> records = response.body().getRecords();
                     List<HarvardArtwork> results = new ArrayList<>();
-                    for (HarvardArtwork art : response.body().getRecords()) {
-                        if (art.getDisplayImage() != null) {
-                            results.add(art);
+                    
+                    if (records != null) {
+                        for (HarvardArtwork art : records) {
+                            if (art.getDisplayImage() != null) {
+                                results.add(art);
+                            }
                         }
                     }
 
@@ -111,7 +142,7 @@ public class SearchFragment extends Fragment {
                         binding.layoutEmptyFilter.setVisibility(View.VISIBLE);
                     } else {
                         binding.resultsHeader.setVisibility(View.VISIBLE);
-                        binding.tvResultCount.setText(results.size() + " ditemukan");
+                        binding.tvResultCount.setText(results.size() + " karya ditemukan");
                         binding.rvSearchResults.setVisibility(View.VISIBLE);
                         binding.rvSearchResults.setAdapter(new SearchArtworkAdapter(results));
                     }
@@ -122,6 +153,7 @@ public class SearchFragment extends Fragment {
 
             @Override
             public void onFailure(Call<HarvardListResponse> call, Throwable t) {
+                if (binding == null) return;
                 binding.progressBar.setVisibility(View.GONE);
                 binding.layoutNetworkError.setVisibility(View.VISIBLE);
             }

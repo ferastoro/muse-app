@@ -55,7 +55,8 @@ public class HarvardArtwork {
     }
 
     public String getDisplayImage() {
-        if (primaryImageUrl != null && !primaryImageUrl.isEmpty() && imagePermissionLevel == 0) return primaryImageUrl;
+        // More lenient: Show image if URL exists
+        if (primaryImageUrl != null && !primaryImageUrl.isEmpty()) return primaryImageUrl;
         return null;
     }
 

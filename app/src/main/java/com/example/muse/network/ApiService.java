@@ -13,7 +13,7 @@ public interface ApiService {
     Call<HarvardListResponse> getFeaturedArtworks(
         @Query("apikey") String apiKey,
         @Query("hasimage") int hasImage,
-        @Query("imagepermissionlevel") int permission,
+        @Query("imagepermissionlevel") Integer permission,
         @Query("classification") String classification,
         @Query("sortby") String sortBy,
         @Query("size") int size,
@@ -24,7 +24,7 @@ public interface ApiService {
     Call<HarvardListResponse> getRecentArtworks(
         @Query("apikey") String apiKey,
         @Query("hasimage") int hasImage,
-        @Query("imagepermissionlevel") int permission,
+        @Query("imagepermissionlevel") Integer permission,
         @Query("size") int size,
         @Query("page") int page,
         @Query("fields") String fields
@@ -33,9 +33,9 @@ public interface ApiService {
     @GET("object")
     Call<HarvardListResponse> searchArtworks(
         @Query("apikey") String apiKey,
-        @Query("keyword") String keyword,
+        @Query("q") String query,
         @Query("hasimage") int hasImage,
-        @Query("imagepermissionlevel") int permission,
+        @Query("imagepermissionlevel") Integer permission,
         @Query("size") int size,
         @Query("fields") String fields
     );
@@ -43,9 +43,9 @@ public interface ApiService {
     @GET("object")
     Call<HarvardListResponse> searchWithFilters(
         @Query("apikey") String apiKey,
-        @Query("keyword") String keyword,
+        @Query("q") String query,
         @Query("hasimage") int hasImage,
-        @Query("imagepermissionlevel") int permission,
+        @Query("imagepermissionlevel") Integer permission,
         @Query("classification") String classification,
         @Query("culture") String culture,
         @Query("datebegin") Integer dateBegin,
@@ -66,7 +66,7 @@ public interface ApiService {
         @Query("apikey") String apiKey,
         @Query("classification") String classification,
         @Query("hasimage") int hasImage,
-        @Query("imagepermissionlevel") int permission,
+        @Query("imagepermissionlevel") Integer permission,
         @Query("size") int size,
         @Query("fields") String fields
     );

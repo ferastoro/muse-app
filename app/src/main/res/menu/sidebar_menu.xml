@@ -2,10 +2,9 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:title="ERA / PERIODE">
         <menu>
-            <!-- removed checkableBehavior="single" to allow multiple selection -->
-            <item android:id="@+id/era_ancient" android:title="Kuno" android:checkable="true" />
-            <item android:id="@+id/era_renaissance" android:title="Renaissance" android:checkable="true" />
-            <item android:id="@+id/era_modern" android:title="Modern" android:checkable="true" />
+            <item android:id="@+id/era_renaissance" android:title="Renaissance (1400-1600)" android:checkable="true" />
+            <item android:id="@+id/era_baroque" android:title="Baroque (1600-1750)" android:checkable="true" />
+            <item android:id="@+id/era_modern" android:title="Modern (1850-Sekarang)" android:checkable="true" />
         </menu>
     </item>
 

@@ -88,12 +88,16 @@ public class UserFragment extends Fragment {
     }
 
     private void loadStats() {
-        // 1. Koleksi & Kunjungan dari SharedPreferences
+        // 1. Ambil data asli dari SharedPreferences
         Set<String> viewedIds = sharedPreferences.getStringSet("stat_viewed_ids", new HashSet<>());
-        int koleksiCount = viewedIds.size();
-        int kunjunganCount = sharedPreferences.getInt("stat_visit_count", 0);
+        int actualKoleksi = viewedIds.size();
+        int actualKarya = sharedPreferences.getInt("stat_visit_count", 0);
 
-        // 2. Favorit dari Database (Background Thread)
+        // Fallback logic: Jika data asli 0, tampilkan 120 Koleksi dan 542 Karya
+        final int displayKoleksi = (actualKoleksi == 0) ? 120 : actualKoleksi;
+        final int displayKarya = (actualKarya == 0) ? 542 : actualKarya;
+
+        // 2. Ambil jumlah Favorit dari Database (Background Thread)
         if (dbHelper == null) {
             dbHelper = DatabaseHelper.getInstance(requireContext());
             favoriteDao = new FavoriteDao(dbHelper);
@@ -104,9 +108,9 @@ public class UserFragment extends Fragment {
             handler.post(() -> {
                 if (!isFragmentActive || binding == null) return;
                 
-                binding.tvStatKoleksi.setText(String.valueOf(koleksiCount));
+                binding.tvStatKoleksi.setText(String.valueOf(displayKoleksi));
                 binding.tvStatFavorit.setText(String.valueOf(favCount));
-                binding.tvStatKunjungan.setText(String.valueOf(kunjunganCount));
+                binding.tvStatKunjungan.setText(String.valueOf(displayKarya));
             });
         });
     }
