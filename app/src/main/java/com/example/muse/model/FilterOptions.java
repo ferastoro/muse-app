@@ -7,20 +7,22 @@ public class FilterOptions {
     private Set<String> classifications = new HashSet<>();
     private Set<String> cultures = new HashSet<>();
     private Set<EraRange> activeEras = new HashSet<>();
+    private Set<String> centuries = new HashSet<>();
     
     private Integer dateBegin = null;
     private Integer dateEnd = null;
-    private String century = null;
 
     private static class EraRange {
         String name;
         Integer begin;
         Integer end;
+        String centuryStr;
 
-        EraRange(String name, Integer begin, Integer end) {
+        EraRange(String name, Integer begin, Integer end, String centuryStr) {
             this.name = name;
             this.begin = begin;
             this.end = end;
+            this.centuryStr = centuryStr;
         }
 
         @Override
@@ -38,8 +40,7 @@ public class FilterOptions {
     }
 
     public boolean hasFilters() {
-        return !classifications.isEmpty() || !cultures.isEmpty() || !activeEras.isEmpty() || 
-               dateBegin != null || dateEnd != null || century != null;
+        return !classifications.isEmpty() || !cultures.isEmpty() || !activeEras.isEmpty();
     }
 
     public String getClassification() {
@@ -68,15 +69,20 @@ public class FilterOptions {
         return String.join("|", cultures);
     }
 
-    public void toggleEra(String name, Integer begin, Integer end, String century) {
-        EraRange newEra = new EraRange(name, begin, end);
+    public void toggleEra(String name, Integer begin, Integer end, String centuryStr) {
+        EraRange newEra = new EraRange(name, begin, end, centuryStr);
         if (activeEras.contains(newEra)) {
             activeEras.remove(newEra);
+            if (centuryStr != null) {
+                for (String c : centuryStr.split("\\|")) centuries.remove(c);
+            }
         } else {
             activeEras.add(newEra);
+            if (centuryStr != null) {
+                for (String c : centuryStr.split("\\|")) centuries.add(c);
+            }
         }
         updateEraDates();
-        this.century = (activeEras.size() == 1) ? century : null;
     }
 
     private void updateEraDates() {
@@ -104,15 +110,19 @@ public class FilterOptions {
 
     public Integer getDateBegin() { return dateBegin; }
     public Integer getDateEnd() { return dateEnd; }
-    public String getCentury() { return century; }
+    
+    public String getCentury() {
+        if (centuries.isEmpty()) return null;
+        return String.join("|", centuries);
+    }
 
     public void reset() {
         classifications.clear();
         cultures.clear();
         activeEras.clear();
+        centuries.clear();
         dateBegin = null;
         dateEnd = null;
-        century = null;
     }
 
     public boolean isClassificationSelected(String c) { return classifications.contains(c); }

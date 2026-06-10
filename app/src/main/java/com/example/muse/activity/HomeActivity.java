@@ -68,13 +68,16 @@ public class HomeActivity extends AppCompatActivity {
         int id = item.getItemId();
         item.setChecked(!item.isChecked()); // Toggle checked state
 
-        // ERA / PERIODE
+        // ERA / PERIODE - Diperbarui agar pemisahan era lebih teratur
         if (id == R.id.era_baroque) {
-            filterOptions.toggleEra("Baroque", 1600, 1750, null);
+            // Baroque & Enlightenment (17th-18th century)
+            filterOptions.toggleEra("Baroque", 1600, 1800, "17th century|18th century");
         } else if (id == R.id.era_renaissance) {
-            filterOptions.toggleEra("Renaissance", 1400, 1600, null);
+            // Renaissance (15th-16th century)
+            filterOptions.toggleEra("Renaissance", 1400, 1600, "15th century|16th century");
         } else if (id == R.id.era_modern) {
-            filterOptions.toggleEra("Modern", 1850, 2025, null);
+            // Modern & Contemporary (20th-21st century) - Sesuai permintaan user
+            filterOptions.toggleEra("Modern", 1900, 2025, "20th century|21st century");
         }
 
         // WILAYAH

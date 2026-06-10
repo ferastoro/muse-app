@@ -1,7 +1,6 @@
 package com.example.muse.adapter;
 
 import android.content.Intent;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,17 +33,17 @@ public class FeaturedArtworkAdapter extends RecyclerView.Adapter<FeaturedArtwork
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         HarvardArtwork artwork = artworks.get(position);
         holder.title.setText(artwork.getTitle());
+        holder.artist.setText(artwork.getArtistName());
 
         Glide.with(holder.image.getContext())
                 .load(artwork.getDisplayImage())
+                .thumbnail(0.1f) // Faster preview
                 .diskCacheStrategy(DiskCacheStrategy.ALL)
                 .placeholder(R.drawable.ic_placeholder)
-                .error(R.drawable.ic_placeholder)
+                .centerCrop()
                 .into(holder.image);
 
-        // MUSE_STAT: Kirim ID ke DetailActivity
         holder.itemView.setOnClickListener(v -> {
-            Log.d("MUSE_STAT", "FeaturedAdapter: Clicking ID " + artwork.getId());
             Intent intent = new Intent(v.getContext(), DetailActivity.class);
             intent.putExtra("artwork_id", artwork.getId());
             v.getContext().startActivity(intent);
@@ -56,11 +55,13 @@ public class FeaturedArtworkAdapter extends RecyclerView.Adapter<FeaturedArtwork
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView image;
-        TextView title;
+        TextView title, artist;
         public ViewHolder(View itemView) {
             super(itemView);
+            // Menyesuaikan ID dengan yang ada di item_artwork_featured.xml
             image = itemView.findViewById(R.id.ivArtwork);
             title = itemView.findViewById(R.id.tvTitle);
+            artist = itemView.findViewById(R.id.tvCategory); // Di layout item_artwork_featured.xml ID-nya tvCategory
         }
     }
 }

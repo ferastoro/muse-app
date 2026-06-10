@@ -15,7 +15,7 @@ public interface ApiService {
         @Query("hasimage") int hasImage,
         @Query("imagepermissionlevel") Integer permission,
         @Query("classification") String classification,
-        @Query("sortby") String sortBy,
+        @Query("sort") String sort,
         @Query("size") int size,
         @Query("fields") String fields
     );
@@ -27,6 +27,7 @@ public interface ApiService {
         @Query("imagepermissionlevel") Integer permission,
         @Query("size") int size,
         @Query("page") int page,
+        @Query("sort") String sort,
         @Query("fields") String fields
     );
 
@@ -37,6 +38,7 @@ public interface ApiService {
         @Query("hasimage") int hasImage,
         @Query("imagepermissionlevel") Integer permission,
         @Query("size") int size,
+        @Query("sort") String sort,
         @Query("fields") String fields
     );
 
@@ -52,6 +54,7 @@ public interface ApiService {
         @Query("dateend") Integer dateEnd,
         @Query("century") String century,
         @Query("size") int size,
+        @Query("sort") String sort,
         @Query("fields") String fields
     );
 

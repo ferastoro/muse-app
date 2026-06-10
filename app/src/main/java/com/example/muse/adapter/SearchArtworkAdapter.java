@@ -36,11 +36,14 @@ public class SearchArtworkAdapter extends RecyclerView.Adapter<SearchArtworkAdap
         holder.artist.setText(artwork.getArtistName());
         holder.location.setText(artwork.getCulture());
 
+        // Optimasi Glide: thumbnail dan diskCache
         Glide.with(holder.image.getContext())
                 .load(artwork.getDisplayImage())
+                .thumbnail(0.1f)
                 .diskCacheStrategy(DiskCacheStrategy.ALL)
                 .placeholder(R.drawable.ic_placeholder)
                 .error(R.drawable.ic_placeholder)
+                .centerCrop()
                 .into(holder.image);
 
         // FIX: Tambahkan OnClickListener agar card bisa dipencet

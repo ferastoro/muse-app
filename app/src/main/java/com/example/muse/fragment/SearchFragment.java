@@ -82,11 +82,9 @@ public class SearchFragment extends Fragment {
         });
     }
 
-    // This method is required by HomeActivity to update search results when filters change
     public void onFilterChanged(FilterOptions filterOptions) {
         this.currentFilters = filterOptions;
         String query = binding.searchView.getQuery().toString();
-        // Only trigger search if there is a query, to avoid empty results on page load
         if (!query.isEmpty()) {
             performSearch(query);
         }
@@ -102,7 +100,6 @@ public class SearchFragment extends Fragment {
         binding.layoutNetworkError.setVisibility(View.GONE);
 
         Call<HarvardListResponse> call;
-        // When filters are active, use the filtered search endpoint
         if (currentFilters.hasFilters()) {
             call = RetrofitClient.getClient().searchWithFilters(
                     BuildConfig.HARVARD_API_KEY, query, 1, null,
@@ -111,12 +108,11 @@ public class SearchFragment extends Fragment {
                     currentFilters.getDateBegin(),
                     currentFilters.getDateEnd(),
                     currentFilters.getCentury(),
-                    50, FIELDS
+                    50, "rank", FIELDS
             );
         } else {
-            // Otherwise use the general search
             call = RetrofitClient.getClient().searchArtworks(
-                    BuildConfig.HARVARD_API_KEY, query, 1, null, 50, FIELDS
+                    BuildConfig.HARVARD_API_KEY, query, 1, null, 50, "rank", FIELDS
             );
         }
 

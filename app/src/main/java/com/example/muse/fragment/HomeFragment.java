@@ -118,7 +118,6 @@ public class HomeFragment extends Fragment {
         binding.layoutEmptyFilter.setVisibility(View.GONE);
         
         if (currentFilters.hasFilters()) {
-            // Filter mode: Hide top section, show only 1 list
             binding.featuredHeader.setVisibility(View.GONE);
             binding.rvFeatured.setVisibility(View.GONE);
             binding.recentHeader.setText("Hasil Filter");
@@ -127,7 +126,6 @@ public class HomeFragment extends Fragment {
             pendingCalls = 1;
             loadFilteredData();
         } else {
-            // Normal mode: Show everything
             binding.featuredHeader.setVisibility(View.VISIBLE);
             binding.rvFeatured.setVisibility(View.VISIBLE);
             binding.recentHeader.setText("Koleksi Terbaru");
@@ -135,8 +133,8 @@ public class HomeFragment extends Fragment {
             
             pendingCalls = 2;
             loadFeatured();
-            // Using a smaller random range (1-20) to ensure we always get data on start
-            loadRecent(new Random().nextInt(20) + 1);
+            // Using random page to get different artworks on refresh
+            loadRecent(new Random().nextInt(100) + 1);
         }
     }
 
@@ -163,7 +161,7 @@ public class HomeFragment extends Fragment {
         String classification = "Paintings";
         
         RetrofitClient.getClient().getFeaturedArtworks(
-                BuildConfig.HARVARD_API_KEY, 1, 0, classification, "totalpageviews", 20, FIELDS
+                BuildConfig.HARVARD_API_KEY, 1, null, classification, "totalpageviews", 20, FIELDS
         ).enqueue(new Callback<HarvardListResponse>() {
             @Override
             public void onResponse(Call<HarvardListResponse> call, Response<HarvardListResponse> response) {
@@ -192,7 +190,7 @@ public class HomeFragment extends Fragment {
 
     private void loadRecent(int page) {
         RetrofitClient.getClient().getRecentArtworks(
-                BuildConfig.HARVARD_API_KEY, 1, 0, 20, page, FIELDS
+                BuildConfig.HARVARD_API_KEY, 1, null, 20, page, "random", FIELDS
         ).enqueue(new Callback<HarvardListResponse>() {
             @Override
             public void onResponse(Call<HarvardListResponse> call, Response<HarvardListResponse> response) {
@@ -207,7 +205,6 @@ public class HomeFragment extends Fragment {
                     cachedRecent = results;
                     binding.rvRecent.setAdapter(new RecentArtworkAdapter(cachedRecent));
                     
-                    // If start screen is empty, try page 1
                     if (results.isEmpty() && page > 1) {
                         loadRecent(1);
                         return;
@@ -224,13 +221,13 @@ public class HomeFragment extends Fragment {
 
     private void loadFilteredData() {
         RetrofitClient.getClient().searchWithFilters(
-                BuildConfig.HARVARD_API_KEY, null, 1, 0,
+                BuildConfig.HARVARD_API_KEY, null, 1, null,
                 currentFilters.getClassification(),
                 currentFilters.getCulture(),
                 currentFilters.getDateBegin(),
                 currentFilters.getDateEnd(),
                 currentFilters.getCentury(),
-                40, FIELDS
+                40, "rank", FIELDS
         ).enqueue(new Callback<HarvardListResponse>() {
             @Override
             public void onResponse(Call<HarvardListResponse> call, Response<HarvardListResponse> response) {
