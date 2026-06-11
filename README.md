@@ -217,12 +217,3 @@ app/src/main/java/com/example/muse/
 | SQLite | Tabel favorites untuk data offline |
 | SharedPreferences | Tema, profil, statistik pengguna |
 | Dark / Light Theme | Dua tema Material 3, toggle di halaman profil |
-
----
-
-## Informasi Tugas
-
-- Mata Kuliah: Lab Mobile 2026
-- Tema: Pendidikan
-- Deadline Pengumpulan: 12 Juni 2026
-- Deadline Presentasi: 17 Juni 2026
