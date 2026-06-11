@@ -71,7 +71,8 @@ public class MainActivity extends AppCompatActivity {
         if (currentNightMode == Configuration.UI_MODE_NIGHT_YES) {
             binding.imgBg.setAlpha(0.10f);
         } else {
-            binding.imgBg.setAlpha(0.15f);
+            // Menaikkan opacity background di Light Mode agar tidak terlalu terang/washout
+            binding.imgBg.setAlpha(0.35f);
         }
     }
 
